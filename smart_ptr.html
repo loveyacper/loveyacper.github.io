@@ -81,7 +81,19 @@ dict是redis实现的字典结构，对于pubsub_channels，key是频道，value
 ```
  事实上，开发者可以看出，pubsub不决定client对象的生命期，只是持有引用。那么使用C++11引入的weak_ptr再适合不过了，它就是本文的第二个主角。
 
-待续...
+##shared_ptr版本1
+shared_ptr是引用计数的指针，因此比起裸指针，需要添加一个引用计数的对象。使用int变量作为引用计数，我们很容易得出它的
+
+第一个版本的结构，如图1，执行bert::shared_ptr<T>  ptr1(new T)之后：
+
+ ![创建第一个shared_ptr](images/smart_ptr1.png)
+
+然后进行指针复制：
+```c++
+bert::shared_ptr<T>   ptr2(ptr1);
+```
+
+ ![复制shared_ptr](images/smart_ptr2.png)
 <!-- markdown end -->
 </div>
 <div class="entry" id="main">
@@ -145,7 +157,20 @@ if (it != sockets_.end())
 
 <p>事实上，开发者可以看出，pubsub不决定client对象的生命期，只是持有引用。那么使用C++11引入的weak_ptr再适合不过了，它就是本文的第二个主角。</p>
 
-<p>待续...</p>
+<h2 id="shared_ptr1">shared_ptr版本1</h2>
+
+<p>shared_ptr是引用计数的指针，因此比起裸指针，需要添加一个引用计数的对象。使用int变量作为引用计数，我们很容易得出它的</p>
+
+<p>第一个版本的结构，如图1，执行bert::shared_ptr<t>  ptr1(new T)之后：</t></p>
+
+<p><img src="images/smart_ptr1.png" alt="创建第一个shared_ptr" title=""></p>
+
+<p>然后进行指针复制：</p>
+
+<pre><code class="c++">bert::shared_ptr&lt;T&gt;   ptr2(ptr1);
+</code></pre>
+
+<p><img src="images/smart_ptr2.png" alt="复制shared_ptr" title=""></p>
 <!-- content end -->
 </div>
 <br>
