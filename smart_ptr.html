@@ -94,6 +94,106 @@ bert::shared_ptr<T>   ptr2(ptr1);
 ```
 
  ![复制shared_ptr](images/smart_ptr2.png)
+
+直接放上第一版代码，略去一些暂时无关紧要的函数：
+```c++
+#ifndef BERT_SHAREPTR_H
+#define BERT_SHAREPTR_H
+
+namespace bert
+{
+
+template <typename T>
+class shared_ptr
+{
+public:
+    explicit shared_ptr(T* ptr = 0) : ptr_(ptr)
+    {
+        count_ = new int(1);
+    }
+
+    ~shared_ptr()
+    {
+        if (-- *count_ == 0)
+        {
+            delete  count_;
+            delete  ptr_;
+        }
+    }
+
+    shared_ptr(const shared_ptr& other) : count_(other.count_), ptr_(other.ptr_)
+    {
+        ++ *count_;
+    }
+  
+    shared_ptr& operator=(const shared_ptr& other)
+    {
+        if (this == &other)
+            return *this;
+
+        reset();
+
+        count_ = other.count_;
+        ptr_ = other.ptr_;
+
+        ++ *count_;
+
+        return *this;
+    }
+
+    void reset()
+    {
+        shared_ptr().swap(*this);
+    }
+
+    void reset(T* ptr)
+    {
+        if (ptr == ptr_)  return;
+
+        shared_ptr(ptr).swap(*this);
+    }
+
+    void swap(shared_ptr& other)
+    {
+        if (this != &other)
+        {
+            // please include header: C++98: <algorithm>, C++11 : <utility>
+            std::swap(count_, other.count_);
+            std::swap(ptr_, other.ptr_);
+        }
+    }
+
+    T& operator*() const
+    {
+        return *ptr_;
+    }
+
+    T* operator->() const
+    {
+        return ptr_;
+    }
+
+    T* get() const
+    {
+        return ptr_;
+    }
+
+private:
+    int* count_;
+    T*   ptr_;
+};
+
+template <typename T>
+inline bool operator<(const shared_ptr<T>& a, const shared_ptr<T>& b)
+{
+    return a.get() < b.get();
+}
+
+} // end namespace bert
+
+#endif
+
+```
 <!-- markdown end -->
 </div>
 <div class="entry" id="main">
@@ -171,6 +271,105 @@ if (it != sockets_.end())
 </code></pre>
 
 <p><img src="images/smart_ptr2.png" alt="复制shared_ptr" title=""></p>
+
+<p>直接放上第一版代码，略去一些暂时无关紧要的函数：</p>
+
+<pre><code class="c++">#ifndef BERT_SHAREPTR_H
+#define BERT_SHAREPTR_H
+
+namespace bert
+{
+
+template &lt;typename T&gt;
+class shared_ptr
+{
+public:
+    explicit shared_ptr(T* ptr = 0) : ptr_(ptr)
+    {
+        count_ = new int(1);
+    }
+
+    ~shared_ptr()
+    {
+        if (-- *count_ == 0)
+        {
+            delete  count_;
+            delete  ptr_;
+        }
+    }
+
+    shared_ptr(const shared_ptr&amp; other) : count_(other.count_), ptr_(other.ptr_)
+    {
+        ++ *count_;
+    }
+
+    shared_ptr&amp; operator=(const shared_ptr&amp; other)
+    {
+        if (this == &amp;other)
+            return *this;
+
+        reset();
+
+        count_ = other.count_;
+        ptr_ = other.ptr_;
+
+        ++ *count_;
+
+        return *this;
+    }
+
+    void reset()
+    {
+        shared_ptr().swap(*this);
+    }
+
+    void reset(T* ptr)
+    {
+        if (ptr == ptr_)  return;
+
+        shared_ptr(ptr).swap(*this);
+    }
+
+    void swap(shared_ptr&amp; other)
+    {
+        if (this != &amp;other)
+        {
+            // please include header: C++98: &lt;algorithm&gt;, C++11 : &lt;utility&gt;
+            std::swap(count_, other.count_);
+            std::swap(ptr_, other.ptr_);
+        }
+    }
+
+    T&amp; operator*() const
+    {
+        return *ptr_;
+    }
+
+    T* operator-&gt;() const
+    {
+        return ptr_;
+    }
+
+    T* get() const
+    {
+        return ptr_;
+    }
+
+private:
+    int* count_;
+    T*   ptr_;
+};
+
+template &lt;typename T&gt;
+inline bool operator&lt;(const shared_ptr&lt;T&gt;&amp; a, const shared_ptr&lt;T&gt;&amp; b)
+{
+    return a.get() &lt; b.get();
+}
+
+} // end namespace bert
+
+#endif
+</code></pre>
 <!-- content end -->
 </div>
 <br>
