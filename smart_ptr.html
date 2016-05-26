@@ -135,7 +135,6 @@ public:
 
         count_ = other.count_;
         ptr_ = other.ptr_;
-
         ++ *count_;
 
         return *this;
@@ -149,7 +148,6 @@ public:
     void reset(T* ptr)
     {
         if (ptr == ptr_)  return;
-
         shared_ptr(ptr).swap(*this);
     }
 
@@ -182,12 +180,6 @@ private:
     int* count_;
     T*   ptr_;
 };
-
-template <typename T>
-inline bool operator<(const shared_ptr<T>& a, const shared_ptr<T>& b)
-{
-    return a.get() < b.get();
-}
 
 } // end namespace bert
 
@@ -312,7 +304,6 @@ public:
 
         count_ = other.count_;
         ptr_ = other.ptr_;
-
         ++ *count_;
 
         return *this;
@@ -326,7 +317,6 @@ public:
     void reset(T* ptr)
     {
         if (ptr == ptr_)  return;
-
         shared_ptr(ptr).swap(*this);
     }
 
@@ -359,12 +349,6 @@ private:
     int* count_;
     T*   ptr_;
 };
-
-template &lt;typename T&gt;
-inline bool operator&lt;(const shared_ptr&lt;T&gt;&amp; a, const shared_ptr&lt;T&gt;&amp; b)
-{
-    return a.get() &lt; b.get();
-}
 
 } // end namespace bert
 
