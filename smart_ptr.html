@@ -140,12 +140,7 @@ public:
         return *this;
     }
 
-    void reset()
-    {
-        shared_ptr().swap(*this);
-    }
-
-    void reset(T* ptr)
+    void reset(T* ptr = 0)
     {
         if (ptr == ptr_)  return;
         shared_ptr(ptr).swap(*this);
@@ -309,12 +304,7 @@ public:
         return *this;
     }
 
-    void reset()
-    {
-        shared_ptr().swap(*this);
-    }
-
-    void reset(T* ptr)
+    void reset(T* ptr = 0)
     {
         if (ptr == ptr_)  return;
         shared_ptr(ptr).swap(*this);
