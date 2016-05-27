@@ -68,20 +68,7 @@ bert.h:13: note: bert::shared_ptr<T>::shared_ptr(T*) [with T = Base]
         ++ *count_;
     }
 ```
-别急，还没有结束。如果明知道Base*指向的是一个Derived实例，用裸指针可以这样做：
-```c++
-   Base* pb = new Derived;
-   Derived* pd = static_cast<Derived* >(pb); //  显式转换
-};
-```
-尝试用智能指针这样做，发现编译器报错：
-```c++
-    bert::shared_ptr<Base> pb(new Derived);
-    bert::shared_ptr<Derived> pd(pb); // error: invalid conversion from ‘Base* ’ to ‘Derived*’
-  
-   // 期待可以这样写：
-   // bert::shared_ptr<Derived> pd(static_cast<Derived>(pb));
-```
+
 <!-- markdown end -->
 </div>
 <div class="entry" id="main">
@@ -128,22 +115,6 @@ bert.h:13: note: bert::shared_ptr&lt;T&gt;::shared_ptr(T*) [with T = Base]
         count_ = ptr.count_;
         ++ *count_;
     }
-</code></pre>
-
-<p>别急，还没有结束。如果明知道Base*指向的是一个Derived实例，用裸指针可以这样做：</p>
-
-<pre><code class="c++">   Base* pb = new Derived;
-   Derived* pd = static_cast&lt;Derived* &gt;(pb); //  显式转换
-};
-</code></pre>
-
-<p>尝试用智能指针这样做，发现编译器报错：</p>
-
-<pre><code class="c++">    bert::shared_ptr&lt;Base&gt; pb(new Derived);
-    bert::shared_ptr&lt;Derived&gt; pd(pb); // error: invalid conversion from ‘Base* ’ to ‘Derived*’
-
-   // 期待可以这样写：
-   // bert::shared_ptr&lt;Derived&gt; pd(static_cast&lt;Derived&gt;(pb));
 </code></pre>
 <!-- content end -->
 </div>
