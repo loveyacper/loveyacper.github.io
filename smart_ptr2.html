@@ -26,7 +26,7 @@
 <div id="md" style="display: none;">
 <!-- markdown -->
 ##第一版的不足
-   在[上篇](smart_ptr.html)的结尾，我们写出一个toy的初级shared_ptr。智能指针不仅仅自动回收资源，而且要和裸指针表现一致，本文将致力于完善它，最终将会呈现给大家一个可以完全替代裸指针的智能指针类。
+   在[上篇](smart_ptr.html)的结尾，我们写出一个toy的初级shared\_ptr。智能指针不仅仅自动回收资源，而且要和裸指针表现一致，本文将致力于完善它，最终将会呈现给大家一个可以完全替代裸指针的智能指针类。
 
 ##类型转换
    假如有一个Base类和继承自它的一个子类Derived，那么存在从Derived指针到Base指针的隐式转换：
@@ -36,12 +36,12 @@
 };
 ```
    
-我们写出类似的智能指针版本:
+我们写出类似的智能指针版本：
 ```c++
     bert::shared_ptr<Derived> pd(new Derived);
     bert::shared_ptr<Base>     pb(pd); // compile error
 ```
-  然后编译... 啊噢，好像出了点问题，gcc开始抱怨：
+  然后编译，啊噢，好像出了点问题，gcc开始抱怨：
 ```c++
 test.cc:13: error: no matching function for call to ‘bert::shared_ptr<Base>::shared_ptr(bert::shared_ptr<Derived>&)’
 
@@ -78,16 +78,15 @@ bert.h:13: note: bert::shared_ptr<T>::shared_ptr(T*) [with T = Base]
    // bert::shared_ptr<Derived> pd(static_cast<Derived>(pb));
 ```
 很显然，Base*没有到Derived*的自动转换，static_cast也不能应用在智能指针上。没关系，我们造一个智能指针的专属版本：`static_pointer_cast`.
-先让大家回忆一下std::advance，它是一个关于迭代器的算法函数，能够自动识别迭代器类型，进行最高效的移动操作，如果是随机迭代器，算法复杂度O(1)，如果是双向迭代器，算法复杂度O(n)。它是如何做到的呢？查看c++标准头文件，发现了这个秘密:(代码我做了一定重写便于阅读)
+先让大家回忆一下std::advance，它是一个关于迭代器的算法函数，能够自动识别迭代器类型，进行最高效的移动操作，如果是随机迭代器，算法复杂度O(1)，如果是双向迭代器，算法复杂度O(n)。它是如何做到的呢？查看c++标准头文件，发现了这个秘密:(代码做了一定重写便于阅读)
 ```c++
   template<typename Iterator, typename Distance >
     inline void
     advance(Iterator& it, Distance n)     {
-      // concept requirements -- taken care of in __advance
+      // 调用辅助函数
       std::__advance(it, n, std::__iterator_category(it));
     }
    //  std::__iterator_category获取迭代器的类型
-
 
   template<typename BidirectionalIterator, typename Distance>
     inline void
@@ -271,13 +270,13 @@ private:
 };
 </code></pre>
 
-<p>我们写出类似的智能指针版本:</p>
+<p>我们写出类似的智能指针版本：</p>
 
 <pre><code class="c++">    bert::shared_ptr&lt;Derived&gt; pd(new Derived);
     bert::shared_ptr&lt;Base&gt;     pb(pd); // compile error
 </code></pre>
 
-<p>然后编译... 啊噢，好像出了点问题，gcc开始抱怨：</p>
+<p>然后编译，啊噢，好像出了点问题，gcc开始抱怨：</p>
 
 <pre><code class="c++">test.cc:13: error: no matching function for call to ‘bert::shared_ptr&lt;Base&gt;::shared_ptr(bert::shared_ptr&lt;Derived&gt;&amp;)’
 
@@ -317,16 +316,15 @@ bert.h:13: note: bert::shared_ptr&lt;T&gt;::shared_ptr(T*) [with T = Base]
 </code></pre>
 
 <p>很显然，Base<em>没有到Derived</em>的自动转换，static_cast也不能应用在智能指针上。没关系，我们造一个智能指针的专属版本：<code>static_pointer_cast</code>.
-先让大家回忆一下std::advance，它是一个关于迭代器的算法函数，能够自动识别迭代器类型，进行最高效的移动操作，如果是随机迭代器，算法复杂度O(1)，如果是双向迭代器，算法复杂度O(n)。它是如何做到的呢？查看c++标准头文件，发现了这个秘密:(代码我做了一定重写便于阅读)</p>
+先让大家回忆一下std::advance，它是一个关于迭代器的算法函数，能够自动识别迭代器类型，进行最高效的移动操作，如果是随机迭代器，算法复杂度O(1)，如果是双向迭代器，算法复杂度O(n)。它是如何做到的呢？查看c++标准头文件，发现了这个秘密:(代码做了一定重写便于阅读)</p>
 
 <pre><code class="c++">  template&lt;typename Iterator, typename Distance &gt;
     inline void
     advance(Iterator&amp; it, Distance n)     {
-      // concept requirements -- taken care of in __advance
+      // 调用辅助函数
       std::__advance(it, n, std::__iterator_category(it));
     }
    //  std::__iterator_category获取迭代器的类型
-
 
   template&lt;typename BidirectionalIterator, typename Distance&gt;
     inline void
