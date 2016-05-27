@@ -56,16 +56,76 @@ bert.h:13: note: bert::shared_ptr<T>::shared_ptr(T*) [with T = Base]
 给出的错误信息很明确，缺少相应的构造函数；只要你的C++基础及格了，应该很清楚智能指针需要加入一个模板拷贝构造函数：
 
 
+别急，还没有结束。如果明知道Base*指向的是一个Derived实例，用裸指针可以这样做：
 ```c++
-   template <typename U>
-   friend class shared_ptr;
-   // shared_ptr<T>和shared_ptr<U>是完全不同的两个类
+   Base* pb = new Derived;
+   Derived* pd = static_cast<Derived* >(pb); //  显式转换
+};
+```
+尝试用智能指针这样做，发现编译器报错：
+```c++
+   bert::shared_ptr<Base> pb(new Derived);
+   bert::shared_ptr<Derived> pd(pb); // error: invalid conversion from ‘Base* ’ to ‘Derived*’
+  
+  // 期待可以这样写：
+  // bert::shared_ptr<Derived> pd(static_cast<Derived>(pb));
+```
+很显然，Base*没有到Derived*的自动转换，static_cast也不能应用在智能指针上。没关系，我们造一个智能指针的专属版本：
 
-   template<class U>
-   shared_ptr(const shared_ptr<U>& ptr) : ptr_(ptr.ptr_)   {
-       count_ = ptr.count_;
-       ++ *count_;
+`static_pointer_cast`.
+先让大家回忆一下std::advance，它是一个关于迭代器的算法函数，能够自动识别迭代器类型，进行最高效的移动操作，如果是随
+
+机迭代器，算法复杂度O(1)，如果是双向迭代器，算法复杂度O(n)。它是如何做到的呢？查看c++标准头文件，发现了这个秘密:(代
+
+码做了一定重写便于阅读)
+```c++
+  template<typename Iterator, typename Distance >
+   inline void
+   advance(Iterator& it, Distance n)     {
+     // 调用辅助函数
+     std::__advance(it, n, std::__iterator_category(it));
    }
+   //  std::__iterator_category获取迭代器的类型
+
+   template<typename BidirectionalIterator, typename Distance>
+   inline void
+   __advance(BidirectionalIterator& it, Distance n,
+              bidirectional_iterator_tag)    {
+      if (n > 0)
+        while (n--)
+            ++it;   //双向迭代器，O(n)复杂度
+      else
+        while (n++)
+            --it;
+    }
+
+   template<typename RandomAccessIterator, typename Distance>
+   inline void
+   __advance(RandomAccessIterator& it, Distance n,
+              random_access_iterator_tag)    {
+         it += n; // 随机迭代器，O(1)复杂度
+   }
+```
+受到标准库的启发，继续完善智能指针：
+```c++
+ struct static_cast_tag
+ {     };      
+
+   // for cast
+       template <typename U>
+       shared_ptr(const shared_ptr<U>& ptr, static_cast_tag ) : ptr_(static_cast<T* >(ptr.ptr_)) {
+         count_ = ptr.count_;
+         ++ *count_;
+    }   
+
+// external  function 
+   template <typename U, typename T>
+shared_ptr<U>  static_pointer_cast(const shared_ptr<T>&  ptr)   {                   
+    return shared_ptr<U>(ptr, static_cast_tag());
+}
+// 现在这样就合法了：
+ bert::shared_ptr<Base> pb(new Derived);
+ bert::shared_ptr<Derived> pd(bert::static_pointer_cast<Derived>(pb));
 ```
 待续。。。怎么全文下划线了啊？
 <!-- markdown end -->
@@ -104,15 +164,79 @@ bert.h:13: note: bert::shared_ptr&lt;T&gt;::shared_ptr(T*) [with T = Base]
 
 <p>给出的错误信息很明确，缺少相应的构造函数；只要你的C++基础及格了，应该很清楚智能指针需要加入一个模板拷贝构造函数：</p>
 
-<pre><code class="c++">   template &lt;typename U&gt;
-   friend class shared_ptr;
-   // shared_ptr&lt;T&gt;和shared_ptr&lt;U&gt;是完全不同的两个类
+<p>别急，还没有结束。如果明知道Base*指向的是一个Derived实例，用裸指针可以这样做：</p>
 
-   template&lt;class U&gt;
-   shared_ptr(const shared_ptr&lt;U&gt;&amp; ptr) : ptr_(ptr.ptr_)   {
-       count_ = ptr.count_;
-       ++ *count_;
+<pre><code class="c++">   Base* pb = new Derived;
+   Derived* pd = static_cast&lt;Derived* &gt;(pb); //  显式转换
+};
+</code></pre>
+
+<p>尝试用智能指针这样做，发现编译器报错：</p>
+
+<pre><code class="c++">   bert::shared_ptr&lt;Base&gt; pb(new Derived);
+   bert::shared_ptr&lt;Derived&gt; pd(pb); // error: invalid conversion from ‘Base* ’ to ‘Derived*’
+
+  // 期待可以这样写：
+  // bert::shared_ptr&lt;Derived&gt; pd(static_cast&lt;Derived&gt;(pb));
+</code></pre>
+
+<p>很显然，Base<em>没有到Derived</em>的自动转换，static_cast也不能应用在智能指针上。没关系，我们造一个智能指针的专属版本：</p>
+
+<p><code>static_pointer_cast</code>.
+先让大家回忆一下std::advance，它是一个关于迭代器的算法函数，能够自动识别迭代器类型，进行最高效的移动操作，如果是随</p>
+
+<p>机迭代器，算法复杂度O(1)，如果是双向迭代器，算法复杂度O(n)。它是如何做到的呢？查看c++标准头文件，发现了这个秘密:(代</p>
+
+<p>码做了一定重写便于阅读)</p>
+
+<pre><code class="c++">  template&lt;typename Iterator, typename Distance &gt;
+   inline void
+   advance(Iterator&amp; it, Distance n)     {
+     // 调用辅助函数
+     std::__advance(it, n, std::__iterator_category(it));
    }
+   //  std::__iterator_category获取迭代器的类型
+
+   template&lt;typename BidirectionalIterator, typename Distance&gt;
+   inline void
+   __advance(BidirectionalIterator&amp; it, Distance n,
+              bidirectional_iterator_tag)    {
+      if (n &gt; 0)
+        while (n--)
+            ++it;   //双向迭代器，O(n)复杂度
+      else
+        while (n++)
+            --it;
+    }
+
+   template&lt;typename RandomAccessIterator, typename Distance&gt;
+   inline void
+   __advance(RandomAccessIterator&amp; it, Distance n,
+              random_access_iterator_tag)    {
+         it += n; // 随机迭代器，O(1)复杂度
+   }
+</code></pre>
+
+<p>受到标准库的启发，继续完善智能指针：</p>
+
+<pre><code class="c++"> struct static_cast_tag
+ {     };      
+
+   // for cast
+       template &lt;typename U&gt;
+       shared_ptr(const shared_ptr&lt;U&gt;&amp; ptr, static_cast_tag ) : ptr_(static_cast&lt;T* &gt;(ptr.ptr_)) {
+         count_ = ptr.count_;
+         ++ *count_;
+    }   
+
+// external  function 
+   template &lt;typename U, typename T&gt;
+shared_ptr&lt;U&gt;  static_pointer_cast(const shared_ptr&lt;T&gt;&amp;  ptr)   {                   
+    return shared_ptr&lt;U&gt;(ptr, static_cast_tag());
+}
+// 现在这样就合法了：
+ bert::shared_ptr&lt;Base&gt; pb(new Derived);
+ bert::shared_ptr&lt;Derived&gt; pd(bert::static_pointer_cast&lt;Derived&gt;(pb));
 </code></pre>
 
 <p>待续。。。怎么全文下划线了啊？</p>
