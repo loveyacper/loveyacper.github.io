@@ -108,8 +108,28 @@ bert.h:13: note: bert::shared_ptr<T>::shared_ptr(T*) [with T = Base]
          it += n; // 随机迭代器，O(1)复杂度
     }
 ```
+受到标准库的启发，继续完善智能指针：
+```c++
+ struct static_cast_tag
+ {     };      
 
+   // for cast
+       template <typename U>
+      explicit shared_ptr(const shared_ptr<U>& ptr, static_cast_tag ) : ptr_(static_cast<T* >(ptr.ptr_)) {
+         count_ = ptr.count_;
+         ++ *count_;
+    }   
 
+// external  function 
+   template <typename U, typename T>
+shared_ptr<U>  static_pointer_cast(const shared_ptr<T>&  ptr)   {                   
+    return shared_ptr<U>(ptr, static_cast_tag());
+}
+// 现在这样就合法了：
+ bert::shared_ptr<Base> pb(new Derived);
+ bert::shared_ptr<Derived> pd(bert::static_pointer_cast<Derived>(pb));
+```
+待续....
 
 ##场景2
 
@@ -327,6 +347,30 @@ bert.h:13: note: bert::shared_ptr&lt;T&gt;::shared_ptr(T*) [with T = Base]
          it += n; // 随机迭代器，O(1)复杂度
     }
 </code></pre>
+
+<p>受到标准库的启发，继续完善智能指针：</p>
+
+<pre><code class="c++"> struct static_cast_tag
+ {     };      
+
+   // for cast
+       template &lt;typename U&gt;
+      explicit shared_ptr(const shared_ptr&lt;U&gt;&amp; ptr, static_cast_tag ) : ptr_(static_cast&lt;T* &gt;(ptr.ptr_)) {
+         count_ = ptr.count_;
+         ++ *count_;
+    }   
+
+// external  function 
+   template &lt;typename U, typename T&gt;
+shared_ptr&lt;U&gt;  static_pointer_cast(const shared_ptr&lt;T&gt;&amp;  ptr)   {                   
+    return shared_ptr&lt;U&gt;(ptr, static_cast_tag());
+}
+// 现在这样就合法了：
+ bert::shared_ptr&lt;Base&gt; pb(new Derived);
+ bert::shared_ptr&lt;Derived&gt; pd(bert::static_pointer_cast&lt;Derived&gt;(pb));
+</code></pre>
+
+<p>待续....</p>
 
 <h2 id="2">场景2</h2>
 
