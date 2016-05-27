@@ -115,7 +115,7 @@ bert.h:13: note: bert::shared_ptr<T>::shared_ptr(T*) [with T = Base]
 
    // for cast
        template <typename U>
-      explicit shared_ptr(const shared_ptr<U>& ptr, static_cast_tag ) : ptr_(static_cast<T* >(ptr.ptr_)) {
+       shared_ptr(const shared_ptr<U>& ptr, static_cast_tag ) : ptr_(static_cast<T* >(ptr.ptr_)) {
          count_ = ptr.count_;
          ++ *count_;
     }   
@@ -355,7 +355,7 @@ bert.h:13: note: bert::shared_ptr&lt;T&gt;::shared_ptr(T*) [with T = Base]
 
    // for cast
        template &lt;typename U&gt;
-      explicit shared_ptr(const shared_ptr&lt;U&gt;&amp; ptr, static_cast_tag ) : ptr_(static_cast&lt;T* &gt;(ptr.ptr_)) {
+       shared_ptr(const shared_ptr&lt;U&gt;&amp; ptr, static_cast_tag ) : ptr_(static_cast&lt;T* &gt;(ptr.ptr_)) {
          count_ = ptr.count_;
          ++ *count_;
     }   
