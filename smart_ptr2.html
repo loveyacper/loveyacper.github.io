@@ -1,0 +1,525 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="Keywords" content="blog"/>
+    <meta name="Description" content="blog"/>
+    <title>Simple</title>
+    <link rel="shortcut icon" href="/static/favicon.png"/>
+    <link rel="stylesheet" type="text/css" href="/main.css" />
+</head>
+<body>
+<div class="main">
+    <div class="header">
+    	<ul id="pages">
+            <li><a href="/">home</a></li>
+            <li><a href="/#/tags">tags</a></li>
+            <li><a href="/#/archive">archive</a></li>
+    	</ul>
+    </div>
+	<div class="wrap-header">
+	<h1>
+    <a href="/" id="title"></a>
+	</h1>
+	</div>
+<div id="md" style="display: none;">
+<!-- markdown -->
+##第一版的不足
+   在[上篇](smart_ptr.html)的结尾，我们写出一个toy的初级shared_ptr。智能指针不仅仅自动回收资源，而且要和裸指针表现一致，本文将致力于完善它，最终将会呈现给大家一个可以完全替代裸指针的智能指针类。
+
+##类型转换
+   假如有一个Base类和继承自它的一个子类Derived，那么存在从Derived指针到Base指针的隐式转换：
+```c++
+   Derived*  pd = new Derived;
+   Base* pb = pd; //  隐式转换
+};
+```
+   
+我们写出类似的智能指针版本:
+```c++
+    bert::shared_ptr<Derived> pd(new Derived);
+    bert::shared_ptr<Base>     pb(pd); // compile error
+```
+  然后编译... 啊噢，好像出了点问题，gcc开始抱怨：
+```c++
+test.cc:13: error: no matching function for call to ‘bert::shared_ptr<Base>::shared_ptr(bert::shared_ptr<Derived>&)’
+
+bert.h:27: note: candidates are: bert::shared_ptr<T>::shared_ptr(const bert::shared_ptr<T>&) [with T = Base]
+
+bert.h:13: note: bert::shared_ptr<T>::shared_ptr(T*) [with T = Base]
+```
+给出的错误信息很明确，缺少相应的构造转换函数；
+只要你的C++基础及格了，应该很清楚智能指针需要加入一个模板拷贝构造函数：
+
+```c++
+    template <typename U>
+    friend class shared_ptr;
+    // shared_ptr<T>和shared_ptr<U>是完全不同的两个类
+
+    template<class U>
+    shared_ptr(const shared_ptr<U>& ptr) : ptr_(ptr.ptr_)   {
+        count_ = ptr.count_;
+        ++ *count_;
+    }
+```
+别急，还没有结束。如果明知道Base*指向的是一个Derived实例，用裸指针可以这样做：
+```c++
+   Base* pb = new Derived;
+   Derived* pd = static_cast<Derived* >(pb); //  显式转换
+};
+```
+尝试用智能指针这样做，发现编译器报错：
+```c++
+    bert::shared_ptr<Base> pb(new Derived);
+    bert::shared_ptr<Derived> pd(pb); // error: invalid conversion from ‘Base* ’ to ‘Derived*’
+  
+   // 期待可以这样写：
+   // bert::shared_ptr<Derived> pd(static_cast<Derived>(pb));
+```
+很显然，Base*没有到Derived*的自动转换，static_cast也不能应用在智能指针上。没关系，我们造一个智能指针的专属版本：`static_pointer_cast`.
+先让大家回忆一下std::advance，它是一个关于迭代器的算法函数，能够自动识别迭代器类型，进行最高效的移动操作，如果是随机迭代器，算法复杂度O(1)，如果是双向迭代器，算法复杂度O(n)。它是如何做到的呢？查看c++标准头文件，发现了这个秘密:(代码我做了一定重写便于阅读)
+```c++
+  template<typename Iterator, typename Distance >
+    inline void
+    advance(Iterator& it, Distance n)     {
+      // concept requirements -- taken care of in __advance
+      std::__advance(it, n, std::__iterator_category(it));
+    }
+   //  std::__iterator_category获取迭代器的类型
+
+
+  template<typename BidirectionalIterator, typename Distance>
+    inline void
+    __advance(BidirectionalIterator& it, Distance n,
+              bidirectional_iterator_tag)    {
+      if (n > 0)
+        while (n--)
+            ++it;   //双向迭代器，O(n)复杂度
+      else
+        while (n++)
+            --it;
+    }
+
+  template<typename RandomAccessIterator, typename Distance>
+    inline void
+    __advance(RandomAccessIterator& it, Distance n,
+              random_access_iterator_tag)    {
+         it += n; // 随机迭代器，O(1)复杂度
+    }
+```
+
+
+
+##场景2
+
+  以`redis`中的`pubsub`系统为例。`pubsub`是一个发布订阅系统，简单可理解为程序维护一个频道的集合，每个频道对应一个订阅该频道的`client`列表。如果频道收到消息，则广播给订阅该频道的所有`client`。
+在redis代码中，大概是维护了这样一个数据结构：
+
+```c
+dict *pubsub_channels;  /* Map channels to list of subscribed clients */
+```
+dict是redis实现的字典结构，对于pubsub_channels，key是频道，value则是一个`struct client`对象的list。
+然而，client的生命期不是由pubsub系统决定的，而是由网络决定（一般情况下）。当client断开连接，那么将调用`freeClient`函数释放这个`client对象`。于是这个函数非常臃肿耦合，需要清除外部逻辑模块所有关于该`client`的指针引用：
+
+```c
+   /* UNWATCH all the keys */
+    unwatchAllKeys(c);
+    listRelease(c->watched_keys);
+
+    /* Unsubscribe from all the pubsub channels */
+    pubsubUnsubscribeAllChannels(c,0);
+    pubsubUnsubscribeAllPatterns(c,0);
+    dictRelease(c->pubsub_channels);
+    listRelease(c->pubsub_patterns);
+```
+ 事实上，开发者可以看出，pubsub不决定client对象的生命期，只是持有引用。那么使用C++11引入的weak_ptr再适合不过了，它就是本文的第二个主角。
+
+##shared_ptr版本1
+shared_ptr是引用计数的指针，因此比起裸指针，需要添加一个引用计数的对象。使用int变量作为引用计数，我们很容易得出它的第一个版本的结构，如图1，执行bert::shared_ptr<T>  ptr1(new T)之后：
+
+ ![创建第一个shared_ptr](images/smart_ptr1.png)
+
+然后进行指针复制：
+```c++
+bert::shared_ptr<T>   ptr2(ptr1);
+```
+
+ ![复制shared_ptr](images/smart_ptr2.png)
+
+由于较为简单，这里直接放上第一版代码，略去一些暂时无关紧要的函数：
+```c++
+#ifndef BERT_SHAREPTR_H
+#define BERT_SHAREPTR_H
+
+namespace bert
+{
+
+template <typename T>
+class shared_ptr
+{
+public:
+    explicit shared_ptr(T* ptr = 0) : ptr_(ptr)
+    {
+        count_ = new int(1);
+    }
+
+    ~shared_ptr()
+    {
+        if (-- *count_ == 0)
+        {
+            delete  count_;
+            delete  ptr_;
+        }
+    }
+
+    shared_ptr(const shared_ptr& other) : count_(other.count_), ptr_(other.ptr_)
+    {
+        ++ *count_;
+    }
+  
+    shared_ptr& operator=(const shared_ptr& other)
+    {
+        if (this == &other)
+            return *this;
+
+        reset();
+
+        count_ = other.count_;
+        ptr_ = other.ptr_;
+        ++ *count_;
+
+        return *this;
+    }
+
+    void reset(T* ptr = 0)
+    {
+        if (ptr == ptr_)  return;
+        shared_ptr(ptr).swap(*this);
+    }
+
+    void swap(shared_ptr& other)
+    {
+        if (this != &other)
+        {
+            // please include header: C++98: <algorithm>, C++11 : <utility>
+            std::swap(count_, other.count_);
+            std::swap(ptr_, other.ptr_);
+        }
+    }
+
+    T& operator*() const
+    {
+        return *ptr_;
+    }
+
+    T* operator->() const
+    {
+        return ptr_;
+    }
+
+    T* get() const
+    {
+        return ptr_;
+    }
+
+private:
+    int* count_;
+    T*   ptr_;
+};
+
+} // end namespace bert
+
+#endif
+
+```
+待续...
+<!-- markdown end -->
+</div>
+<div class="entry" id="main">
+<!-- content -->
+<h2 id="">第一版的不足</h2>
+
+<p>在<a href="smart_ptr.html">上篇</a>的结尾，我们写出一个toy的初级shared_ptr。智能指针不仅仅自动回收资源，而且要和裸指针表现一致，本文将致力于完善它，最终将会呈现给大家一个可以完全替代裸指针的智能指针类。</p>
+
+<h2 id="">类型转换</h2>
+
+<p>假如有一个Base类和继承自它的一个子类Derived，那么存在从Derived指针到Base指针的隐式转换：</p>
+
+<pre><code class="c++">   Derived*  pd = new Derived;
+   Base* pb = pd; //  隐式转换
+};
+</code></pre>
+
+<p>我们写出类似的智能指针版本:</p>
+
+<pre><code class="c++">    bert::shared_ptr&lt;Derived&gt; pd(new Derived);
+    bert::shared_ptr&lt;Base&gt;     pb(pd); // compile error
+</code></pre>
+
+<p>然后编译... 啊噢，好像出了点问题，gcc开始抱怨：</p>
+
+<pre><code class="c++">test.cc:13: error: no matching function for call to ‘bert::shared_ptr&lt;Base&gt;::shared_ptr(bert::shared_ptr&lt;Derived&gt;&amp;)’
+
+bert.h:27: note: candidates are: bert::shared_ptr&lt;T&gt;::shared_ptr(const bert::shared_ptr&lt;T&gt;&amp;) [with T = Base]
+
+bert.h:13: note: bert::shared_ptr&lt;T&gt;::shared_ptr(T*) [with T = Base]
+</code></pre>
+
+<p>给出的错误信息很明确，缺少相应的构造转换函数；
+只要你的C++基础及格了，应该很清楚智能指针需要加入一个模板拷贝构造函数：</p>
+
+<pre><code class="c++">    template &lt;typename U&gt;
+    friend class shared_ptr;
+    // shared_ptr&lt;T&gt;和shared_ptr&lt;U&gt;是完全不同的两个类
+
+    template&lt;class U&gt;
+    shared_ptr(const shared_ptr&lt;U&gt;&amp; ptr) : ptr_(ptr.ptr_)   {
+        count_ = ptr.count_;
+        ++ *count_;
+    }
+</code></pre>
+
+<p>别急，还没有结束。如果明知道Base*指向的是一个Derived实例，用裸指针可以这样做：</p>
+
+<pre><code class="c++">   Base* pb = new Derived;
+   Derived* pd = static_cast&lt;Derived* &gt;(pb); //  显式转换
+};
+</code></pre>
+
+<p>尝试用智能指针这样做，发现编译器报错：</p>
+
+<pre><code class="c++">    bert::shared_ptr&lt;Base&gt; pb(new Derived);
+    bert::shared_ptr&lt;Derived&gt; pd(pb); // error: invalid conversion from ‘Base* ’ to ‘Derived*’
+
+   // 期待可以这样写：
+   // bert::shared_ptr&lt;Derived&gt; pd(static_cast&lt;Derived&gt;(pb));
+</code></pre>
+
+<p>很显然，Base<em>没有到Derived</em>的自动转换，static_cast也不能应用在智能指针上。没关系，我们造一个智能指针的专属版本：<code>static_pointer_cast</code>.
+先让大家回忆一下std::advance，它是一个关于迭代器的算法函数，能够自动识别迭代器类型，进行最高效的移动操作，如果是随机迭代器，算法复杂度O(1)，如果是双向迭代器，算法复杂度O(n)。它是如何做到的呢？查看c++标准头文件，发现了这个秘密:(代码我做了一定重写便于阅读)</p>
+
+<pre><code class="c++">  template&lt;typename Iterator, typename Distance &gt;
+    inline void
+    advance(Iterator&amp; it, Distance n)     {
+      // concept requirements -- taken care of in __advance
+      std::__advance(it, n, std::__iterator_category(it));
+    }
+   //  std::__iterator_category获取迭代器的类型
+
+
+  template&lt;typename BidirectionalIterator, typename Distance&gt;
+    inline void
+    __advance(BidirectionalIterator&amp; it, Distance n,
+              bidirectional_iterator_tag)    {
+      if (n &gt; 0)
+        while (n--)
+            ++it;   //双向迭代器，O(n)复杂度
+      else
+        while (n++)
+            --it;
+    }
+
+  template&lt;typename RandomAccessIterator, typename Distance&gt;
+    inline void
+    __advance(RandomAccessIterator&amp; it, Distance n,
+              random_access_iterator_tag)    {
+         it += n; // 随机迭代器，O(1)复杂度
+    }
+</code></pre>
+
+<h2 id="2">场景2</h2>
+
+<p>以<code>redis</code>中的<code>pubsub</code>系统为例。<code>pubsub</code>是一个发布订阅系统，简单可理解为程序维护一个频道的集合，每个频道对应一个订阅该频道的<code>client</code>列表。如果频道收到消息，则广播给订阅该频道的所有<code>client</code>。
+在redis代码中，大概是维护了这样一个数据结构：</p>
+
+<pre><code class="c">dict *pubsub_channels;  /* Map channels to list of subscribed clients */
+</code></pre>
+
+<p>dict是redis实现的字典结构，对于pubsub_channels，key是频道，value则是一个<code>struct client</code>对象的list。
+然而，client的生命期不是由pubsub系统决定的，而是由网络决定（一般情况下）。当client断开连接，那么将调用<code>freeClient</code>函数释放这个<code>client对象</code>。于是这个函数非常臃肿耦合，需要清除外部逻辑模块所有关于该<code>client</code>的指针引用：</p>
+
+<pre><code class="c">   /* UNWATCH all the keys */
+    unwatchAllKeys(c);
+    listRelease(c-&gt;watched_keys);
+
+    /* Unsubscribe from all the pubsub channels */
+    pubsubUnsubscribeAllChannels(c,0);
+    pubsubUnsubscribeAllPatterns(c,0);
+    dictRelease(c-&gt;pubsub_channels);
+    listRelease(c-&gt;pubsub_patterns);
+</code></pre>
+
+<p>事实上，开发者可以看出，pubsub不决定client对象的生命期，只是持有引用。那么使用C++11引入的weak_ptr再适合不过了，它就是本文的第二个主角。</p>
+
+<h2 id="shared_ptr1">shared_ptr版本1</h2>
+
+<p>shared<em>ptr是引用计数的指针，因此比起裸指针，需要添加一个引用计数的对象。使用int变量作为引用计数，我们很容易得出它的第一个版本的结构，如图1，执行bert::shared</em>ptr<t>  ptr1(new T)之后：</t></p>
+
+<p><img src="images/smart_ptr1.png" alt="创建第一个shared_ptr" title=""></p>
+
+<p>然后进行指针复制：</p>
+
+<pre><code class="c++">bert::shared_ptr&lt;T&gt;   ptr2(ptr1);
+</code></pre>
+
+<p><img src="images/smart_ptr2.png" alt="复制shared_ptr" title=""></p>
+
+<p>由于较为简单，这里直接放上第一版代码，略去一些暂时无关紧要的函数：</p>
+
+<pre><code class="c++">#ifndef BERT_SHAREPTR_H
+#define BERT_SHAREPTR_H
+
+namespace bert
+{
+
+template &lt;typename T&gt;
+class shared_ptr
+{
+public:
+    explicit shared_ptr(T* ptr = 0) : ptr_(ptr)
+    {
+        count_ = new int(1);
+    }
+
+    ~shared_ptr()
+    {
+        if (-- *count_ == 0)
+        {
+            delete  count_;
+            delete  ptr_;
+        }
+    }
+
+    shared_ptr(const shared_ptr&amp; other) : count_(other.count_), ptr_(other.ptr_)
+    {
+        ++ *count_;
+    }
+
+    shared_ptr&amp; operator=(const shared_ptr&amp; other)
+    {
+        if (this == &amp;other)
+            return *this;
+
+        reset();
+
+        count_ = other.count_;
+        ptr_ = other.ptr_;
+        ++ *count_;
+
+        return *this;
+    }
+
+    void reset(T* ptr = 0)
+    {
+        if (ptr == ptr_)  return;
+        shared_ptr(ptr).swap(*this);
+    }
+
+    void swap(shared_ptr&amp; other)
+    {
+        if (this != &amp;other)
+        {
+            // please include header: C++98: &lt;algorithm&gt;, C++11 : &lt;utility&gt;
+            std::swap(count_, other.count_);
+            std::swap(ptr_, other.ptr_);
+        }
+    }
+
+    T&amp; operator*() const
+    {
+        return *ptr_;
+    }
+
+    T* operator-&gt;() const
+    {
+        return ptr_;
+    }
+
+    T* get() const
+    {
+        return ptr_;
+    }
+
+private:
+    int* count_;
+    T*   ptr_;
+};
+
+} // end namespace bert
+
+#endif
+</code></pre>
+
+<p>待续...</p>
+<!-- content end -->
+</div>
+<br>
+<br>
+    <div id="disqus_thread"></div>
+	<div class="footer">
+		<p>© Copyright 2014 by isnowfy, Designed by isnowfy</p>
+	</div>
+</div>
+<script src="main.js"></script>
+<script id="content" type="text/mustache">
+    <h1>{{title}}</h1>
+    <div class="tag">
+    {{date}}
+    {{#tags}}
+    <a href="/#/tag/{{name}}">#{{name}}</a>
+    {{/tags}}
+    </div>
+</script>
+<script id="pagesTemplate" type="text/mustache">
+    {{#pages}}
+    <li>
+        <a href="{{path}}">{{title}}</a>
+    </li>
+    {{/pages}}
+</script>
+<script>
+$(document).ready(function() {
+    $.ajax({
+        url: "main.json",
+        type: "GET",
+        dataType: "json",
+        success: function(data) {
+            $("#title").html(data.name);
+            var pagesTemplate = Hogan.compile($("#pagesTemplate").html());
+            var pagesHtml = pagesTemplate.render({"pages": data.pages});
+            $("#pages").append(pagesHtml);
+            //path
+            var path = "smart_ptr2.html";
+            //path end
+            var now = 0;
+            for (var i = 0; i < data.posts.length; ++i)
+                if (path == data.posts[i].path)
+                    now = i;
+            var post = data.posts[now];
+            var tmp = post.tags.split(" ");
+            var tags = [];
+            for (var i = 0; i < tmp.length; ++i)
+                if (tmp[i].length > 0)
+                    tags.push({"name": tmp[i]});
+            var contentTemplate = Hogan.compile($("#content").html());
+            var contentHtml = contentTemplate.render({"title": post.title, "tags": tags, "date": post.date});
+            $("#main").prepend(contentHtml);
+            if (data.disqus_shortname.length > 0) {
+                var disqus_shortname = data.disqus_shortname;
+                (function() {
+                    var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+                    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+                    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+                })();
+            }
+        }
+    });
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ["\\(", "\\)"]], processEscapes: true}});
+</script>
+</body>
+</html>
