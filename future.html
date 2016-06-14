@@ -30,9 +30,9 @@
 
 <p>Folly Futures是一个受<a href="https://twitter.github.io/finagle/guide/Futures.html" target="_blank">Twitter用Scala实现的Futures</a>启发而来的异步C++框架。 (参见<a href="https://github.com/twitter/util/blob/master/util-core/src/main/scala/com/twitter/util/Future.scala" target="_blank">Future.scala</a>, <a href="https://github.com/twitter/util/blob/master/util-core/src/main/scala/com/twitter/util/Promise.scala" target="_blank">Promise.scala</a>, and friends)。
 
-<p>它和std::future的主要区别是，你可以给Futures设置回调函数，(通过<tt>then()</tt>),将Futures顺序的或者并行的组合起来，得到清爽的异步代码。</p>
+<p>它和std::future的主要区别是，你可以给Futures设置回调函数，(通过<tt>then()</tt>),将Futures顺序的或者并行的组合起来，得到干净的异步代码。</p>
 
-<h2 id="brief-synopsis">Brief Synopsis <a href="#brief-synopsis" class="headerLink">#</a></h2>
+<h2 id="brief-synopsis">概述 <a href="#brief-synopsis" class="headerLink">#</a></h2>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class="cp">#</span><span class="cp">include &lt;folly</span><span class="cp">/</span><span class="cp">futures</span><span class="cp">/</span><span class="cp">Future.h&gt;</span><span class="cp">
 </span><span class=""></span><span class="k">using</span><span class=""> </span><span class="k">namespace</span><span class=""> </span><span class="n">folly</span><span class="p">;</span><span class="">
@@ -58,7 +58,7 @@
 </span><span class="">  </span><span class=""></span><span class="n">cout</span><span class=""> </span><span class="o">&lt;</span><span class="o">&lt;</span><span class=""> </span><span class="s">&quot;</span><span class="s">Promise fulfilled</span><span class="s">&quot;</span><span class=""> </span><span class="o">&lt;</span><span class="o">&lt;</span><span class=""> </span><span class="n">endl</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>This would print:</p>
+<p>将会打印:</p>
 
 <div class="remarkup-code-block" data-code-lang="php"><pre class="remarkup-code"><span class="no">making</span> <span class="no">Promise</span>
 <span class="no">Future</span> <span class="no">chain</span> <span class="no">made</span>
@@ -66,11 +66,11 @@
 <span class="nf" data-symbol-name="foo">foo</span><span class="o">(</span><span class="mi">42</span><span class="o">)</span>
 <span class="no">Promise</span> <span class="no">fulfilled</span></pre></div>
 
-<h3 id="blog-post">Blog Post <a href="#blog-post" class="headerLink">#</a></h3>
+<h3 id="blog-post">博客相关 <a href="#blog-post" class="headerLink">#</a></h3>
 
-<p>In addition to this document, there is <a href="https://code.facebook.com/posts/1661982097368498/futures-for-c-11-at-facebook/" target="_blank">a blog post on code.facebook.com (June 2015)</a>.</p></section><section class="dex_document"><h1>Brief Guide</h1><p class="dex_introduction"></p><p>This brief guide covers the basics. For a more in-depth coverage skip to the appropriate section.</p>
+<p>除了这篇文档，还有 <a href="https://code.facebook.com/posts/1661982097368498/futures-for-c-11-at-facebook/" target="_blank">一篇发表在code.facebook.com (June 2015)的博客</a>。</p></section><section class="dex_document"><h1>简要指导</h1><p class="dex_introduction"></p><p>简要指导包括了最基础的部分。想要更深一步跳到对应的章节。</p>
 
-<p>Let&#039;s begin with an example using an imaginary simplified Memcache client interface:</p>
+<p>让我们以一个假想的简单Memcached客户端接口作为开始:</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="k">using</span><span class=""> </span><span class="n">std</span><span class="o">:</span><span class="o">:</span><span class="n">string</span><span class="p">;</span><span class="">
 </span><span class=""></span><span class="k">class</span><span class=""> </span><span class="nc">MemcacheClient</span><span class=""> </span><span class="p">&#123;</span><span class="">
@@ -93,16 +93,16 @@
 </span><span class=""></span><span class="p">&#125;</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>This API is synchronous, i.e. when you call <tt>get()</tt> you have to wait for the result. This is very simple, but unfortunately it is also very easy to write very slow code using synchronous APIs.</p>
+<p>这个API是同步的，亦即，当你调用 <tt>get()</tt>你必须等待结果返回。这个例子很简单，但很不幸，使用同步API容易编写出非常低效的代码。</p>
 
-<p>Now, consider this traditional asynchronous signature for <tt>get()</tt>:</p>
+<p>现在思考一下异步的<tt>get()</tt>签名:</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="kt">int</span><span class=""> </span><span class="nf">get</span><span class=""></span><span class="p">(</span><span class="n">string</span><span class=""> </span><span class="n">key</span><span class="p">,</span><span class=""> </span><span class="n">std</span><span class="o">:</span><span class="o">:</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">(</span><span class="n">GetReply</span><span class="p">)</span><span class="o">&gt;</span><span class=""> </span><span class="n">callback</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>When you call <tt>get()</tt>, your asynchronous operation begins and when it finishes your callback will be called with the result. Very performant code can be written with an API like this, but for nontrivial applications the code devolves into a special kind of spaghetti code affectionately referred to as &quot;callback hell&quot;.</p>
+<p>当你调用<tt>get()</tt>，你的异步请求开始了，当它完成的时候，你的回调函数将会以异步结果为参数被调用。用这样的API可以写出非常高效的代码，但是对于很多应用，开发者容易因为callback hell写出意大利面条式的臃肿代码。</p>
 
-<p>The Future-based API looks like this:</p>
+<p>基于Future的API看上去是这样的:</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">Future</span><span class="o">&lt;</span><span class="n">GetReply</span><span class="o">&gt;</span><span class=""> </span><span class="n">get</span><span class="p">(</span><span class="n">string</span><span class=""> </span><span class="n">key</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
@@ -1185,9 +1185,9 @@ The three laws refer to a different formulation of the axioms, in terms of the K
 
 <p>Folly Futures是一个受<a href="https://twitter.github.io/finagle/guide/Futures.html" target="_blank">Twitter用Scala实现的Futures</a>启发而来的异步C++框架。 (参见<a href="https://github.com/twitter/util/blob/master/util-core/src/main/scala/com/twitter/util/Future.scala" target="_blank">Future.scala</a>, <a href="https://github.com/twitter/util/blob/master/util-core/src/main/scala/com/twitter/util/Promise.scala" target="_blank">Promise.scala</a>, and friends)。
 
-</p><p>它和std::future的主要区别是，你可以给Futures设置回调函数，(通过<tt>then()</tt>),将Futures顺序的或者并行的组合起来，得到清爽的异步代码。</p>
+</p><p>它和std::future的主要区别是，你可以给Futures设置回调函数，(通过<tt>then()</tt>),将Futures顺序的或者并行的组合起来，得到干净的异步代码。</p>
 
-<h2 id="brief-synopsis">Brief Synopsis <a href="#brief-synopsis" class="headerLink">#</a></h2>
+<h2 id="brief-synopsis">概述 <a href="#brief-synopsis" class="headerLink">#</a></h2>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class="cp">#</span><span class="cp">include &lt;folly</span><span class="cp">/</span><span class="cp">futures</span><span class="cp">/</span><span class="cp">Future.h&gt;</span><span class="cp">
 </span><span class=""></span><span class="k">using</span><span class=""> </span><span class="k">namespace</span><span class=""> </span><span class="n">folly</span><span class="p">;</span><span class="">
@@ -1213,7 +1213,7 @@ The three laws refer to a different formulation of the axioms, in terms of the K
 </span><span class="">  </span><span class=""></span><span class="n">cout</span><span class=""> </span><span class="o">&lt;</span><span class="o">&lt;</span><span class=""> </span><span class="s">"</span><span class="s">Promise fulfilled</span><span class="s">"</span><span class=""> </span><span class="o">&lt;</span><span class="o">&lt;</span><span class=""> </span><span class="n">endl</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>This would print:</p>
+<p>将会打印:</p>
 
 <div class="remarkup-code-block" data-code-lang="php"><pre class="remarkup-code"><span class="no">making</span> <span class="no">Promise</span>
 <span class="no">Future</span> <span class="no">chain</span> <span class="no">made</span>
@@ -1221,11 +1221,11 @@ The three laws refer to a different formulation of the axioms, in terms of the K
 <span class="nf" data-symbol-name="foo">foo</span><span class="o">(</span><span class="mi">42</span><span class="o">)</span>
 <span class="no">Promise</span> <span class="no">fulfilled</span></pre></div>
 
-<h3 id="blog-post">Blog Post <a href="#blog-post" class="headerLink">#</a></h3>
+<h3 id="blog-post">博客相关 <a href="#blog-post" class="headerLink">#</a></h3>
 
-<p>In addition to this document, there is <a href="https://code.facebook.com/posts/1661982097368498/futures-for-c-11-at-facebook/" target="_blank">a blog post on code.facebook.com (June 2015)</a>.</p></section><section class="dex_document"><h1>Brief Guide</h1><p class="dex_introduction"></p><p>This brief guide covers the basics. For a more in-depth coverage skip to the appropriate section.</p>
+<p>除了这篇文档，还有 <a href="https://code.facebook.com/posts/1661982097368498/futures-for-c-11-at-facebook/" target="_blank">一篇发表在code.facebook.com (June 2015)的博客</a>。</p></section><section class="dex_document"><h1>简要指导</h1><p class="dex_introduction"></p><p>简要指导包括了最基础的部分。想要更深一步跳到对应的章节。</p>
 
-<p>Let's begin with an example using an imaginary simplified Memcache client interface:</p>
+<p>让我们以一个假想的简单Memcached客户端接口作为开始:</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="k">using</span><span class=""> </span><span class="n">std</span><span class="o">:</span><span class="o">:</span><span class="n">string</span><span class="p">;</span><span class="">
 </span><span class=""></span><span class="k">class</span><span class=""> </span><span class="nc">MemcacheClient</span><span class=""> </span><span class="p">{</span><span class="">
@@ -1248,16 +1248,16 @@ The three laws refer to a different formulation of the axioms, in terms of the K
 </span><span class=""></span><span class="p">}</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>This API is synchronous, i.e. when you call <tt>get()</tt> you have to wait for the result. This is very simple, but unfortunately it is also very easy to write very slow code using synchronous APIs.</p>
+<p>这个API是同步的，亦即，当你调用 <tt>get()</tt>你必须等待结果返回。这个例子很简单，但很不幸，使用同步API容易编写出非常低效的代码。</p>
 
-<p>Now, consider this traditional asynchronous signature for <tt>get()</tt>:</p>
+<p>现在思考一下异步的<tt>get()</tt>签名:</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="kt">int</span><span class=""> </span><span class="nf">get</span><span class=""></span><span class="p">(</span><span class="n">string</span><span class=""> </span><span class="n">key</span><span class="p">,</span><span class=""> </span><span class="n">std</span><span class="o">:</span><span class="o">:</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">(</span><span class="n">GetReply</span><span class="p">)</span><span class="o">&gt;</span><span class=""> </span><span class="n">callback</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>When you call <tt>get()</tt>, your asynchronous operation begins and when it finishes your callback will be called with the result. Very performant code can be written with an API like this, but for nontrivial applications the code devolves into a special kind of spaghetti code affectionately referred to as "callback hell".</p>
+<p>当你调用<tt>get()</tt>，你的异步请求开始了，当它完成的时候，你的回调函数将会以异步结果为参数被调用。用这样的API可以写出非常高效的代码，但是对于很多应用，开发者容易因为callback hell写出意大利面条式的臃肿代码。</p>
 
-<p>The Future-based API looks like this:</p>
+<p>基于Future的API看上去是这样的:</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">Future</span><span class="o">&lt;</span><span class="n">GetReply</span><span class="o">&gt;</span><span class=""> </span><span class="n">get</span><span class="p">(</span><span class="n">string</span><span class=""> </span><span class="n">key</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
