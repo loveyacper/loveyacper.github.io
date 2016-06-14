@@ -285,16 +285,16 @@
 
 <p>futures的<tt>then()</tt>方法是关于Futures代码的真正核心.它允许你提供一个回调函数，当<tt>Future</tt>完成的时候被执行。注意我们在设置回调之后兑现了承诺，这两个操作也可以交换顺序。 在一个已完成的future上设置回调将会立即得到执行。</p>
 
-<p>In this case, the callback takes a value directly. If the Future contained an exception, the callback will be passed over and the exception will be propagated to the resultant Future - more on that in a second. Your callback may also take a <a href="https://github.com/facebook/folly/blob/master/folly/Try.h" target="_blank">Try</a>, which encapsulates either an exception or a value of its templated type.</p>
+<p>在这个例子，回调函数直接得到一个值.如果Future含有异常,回调函数将不被执行，异常将传播给生成的Future - 仔细思考一秒钟.你的回调也可以接受一个<a href="https://github.com/facebook/folly/blob/master/folly/Try.h" target="_blank">Try</a>, 它封装了一个异常或者一个值。</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">f</span><span class="p">.</span><span class="n">then</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="p">(</span><span class="n">Try</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class=""> </span><span class="k">const</span><span class="o">&amp;</span><span class=""> </span><span class="n">t</span><span class="p">)</span><span class="p">&#123;</span><span class="">
 </span><span class="">  </span><span class="n">cout</span><span class=""> </span><span class="o">&lt;</span><span class="o">&lt;</span><span class=""> </span><span class="n">t</span><span class="p">.</span><span class="n">value</span><span class="p">(</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span><span class="p">&#125;</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<div class="remarkup-note"><span class="remarkup-note-word">NOTE:</span> Do not use Try unless you are actually going to do exception handling in your callback. It is much cleaner and often more performant to take the value directly when you can. If you want to do exception handling, there still might be better options than Try. See <a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14604">Error Handling</a>.</div>
+<div class="remarkup-note"><span class="remarkup-note-word">注意:</span> 不用使用Try除非你想自己在回调里处理异常.如果能尽量直接接受一个值会更加清晰和高效.如果你想做异常处理，有比用Try更好的方法。见<a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14604">Error Handling</a>。</div>
 
-<div class="remarkup-note"><span class="remarkup-note-word">NOTE:</span> When passing a callback to <tt>then</tt>, the future stores a copy of it until the callback has been executed. If, for example, you pass a lambda function that captures a shared pointer, the future will keep the referenced object alive only until the callback has been executed.</div>
+<div class="remarkup-note"><span class="remarkup-note-word">注意:</span>当向<tt>then</tt>传递一个回调,future在它执行之前，内部做了一份拷贝。如果，比如，你传递了一个捕获shared pointer的lambda,future将在回调函数执行之前保证引用对象是存活的。</div>
 
 <p>The real power of <tt>then()</tt> is that it <em>returns a <tt>Future</tt> of the type that the callback returns</em> and can therefore be chained and nested with ease. Let&#039;s consider another example:</p>
 
@@ -1440,16 +1440,16 @@ The three laws refer to a different formulation of the axioms, in terms of the K
 
 <p>futures的<tt>then()</tt>方法是关于Futures代码的真正核心.它允许你提供一个回调函数，当<tt>Future</tt>完成的时候被执行。注意我们在设置回调之后兑现了承诺，这两个操作也可以交换顺序。 在一个已完成的future上设置回调将会立即得到执行。</p>
 
-<p>In this case, the callback takes a value directly. If the Future contained an exception, the callback will be passed over and the exception will be propagated to the resultant Future - more on that in a second. Your callback may also take a <a href="https://github.com/facebook/folly/blob/master/folly/Try.h" target="_blank">Try</a>, which encapsulates either an exception or a value of its templated type.</p>
+<p>在这个例子，回调函数直接得到一个值.如果Future含有异常,回调函数将不被执行，异常将传播给生成的Future - 仔细思考一秒钟.你的回调也可以接受一个<a href="https://github.com/facebook/folly/blob/master/folly/Try.h" target="_blank">Try</a>, 它封装了一个异常或者一个值。</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">f</span><span class="p">.</span><span class="n">then</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="p">(</span><span class="n">Try</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class=""> </span><span class="k">const</span><span class="o">&amp;</span><span class=""> </span><span class="n">t</span><span class="p">)</span><span class="p">{</span><span class="">
 </span><span class="">  </span><span class="n">cout</span><span class=""> </span><span class="o">&lt;</span><span class="o">&lt;</span><span class=""> </span><span class="n">t</span><span class="p">.</span><span class="n">value</span><span class="p">(</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span><span class="p">}</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<div class="remarkup-note"><span class="remarkup-note-word">NOTE:</span> Do not use Try unless you are actually going to do exception handling in your callback. It is much cleaner and often more performant to take the value directly when you can. If you want to do exception handling, there still might be better options than Try. See <a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14604">Error Handling</a>.</div>
+<div class="remarkup-note"><span class="remarkup-note-word">注意:</span> 不用使用Try除非你想自己在回调里处理异常.如果能尽量直接接受一个值会更加清晰和高效.如果你想做异常处理，有比用Try更好的方法。见<a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14604">Error Handling</a>。</div>
 
-<div class="remarkup-note"><span class="remarkup-note-word">NOTE:</span> When passing a callback to <tt>then</tt>, the future stores a copy of it until the callback has been executed. If, for example, you pass a lambda function that captures a shared pointer, the future will keep the referenced object alive only until the callback has been executed.</div>
+<div class="remarkup-note"><span class="remarkup-note-word">注意:</span>当向<tt>then</tt>传递一个回调,future在它执行之前，内部做了一份拷贝。如果，比如，你传递了一个捕获shared pointer的lambda,future将在回调函数执行之前保证引用对象是存活的。</div>
 
 <p>The real power of <tt>then()</tt> is that it <em>returns a <tt>Future</tt> of the type that the callback returns</em> and can therefore be chained and nested with ease. Let's consider another example:</p>
 
