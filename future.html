@@ -185,9 +185,9 @@
 </span><span class=""></span><span class="n">p</span><span class="p">.</span><span class="n">setValue</span><span class="p">(</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>This is legal and technically threadsafe. However, it is important to realize that you do not know in which thread <tt>x</tt>, <tt>y</tt>, and/or <tt>z</tt> will execute. Maybe they will execute in Thread A when <tt>p.setValue()</tt> is called. Or, maybe they will execute in Thread B when <tt>f.then</tt> is called. Or, maybe <tt>x</tt> will execute in Thread B, but <tt>y</tt> and/or <tt>z</tt> will execute in Thread A. There&#039;s a race between <tt>setValue</tt> and <tt>then</tt>&#x2014;whichever runs last will execute the callback. The only guarantee is that one of them will run the callback.</p>
+<p>这是合法的，技术上也是线程安全的。但是，要意识到你不知道哪个线程会执行<tt>x</tt>, <tt>y</tt>, 和/或<tt>z</tt>是很重要的。也许它们会在线程A执行当调用<tt>p.setValue()</tt>的时候。或者，它们会在线程B执行当<tt>f.then</tt>被调用的时候。又或者，<tt>x</tt>在线程B执行，但是<tt>y</tt>和/或 <tt>z</tt>在线程A执行。在<tt>setValue</tt>和<tt>then</tt>之间有竞争，最后调用的那个将执行回调。仅仅保证回调会得到执行。</p>
 
-<p>Naturally, you will want some control over which thread executes callbacks. We have a few mechanisms to help.</p>
+<p>正常情况下，你期望控制由哪个线程执行回调，我们有一些机制来帮助你。</p>
 
 <p>The first and most useful is <tt>via</tt>, which passes execution through an <tt>Executor</tt>, which usually has the effect of running the callback in a new thread.</p>
 
@@ -1340,9 +1340,9 @@ The three laws refer to a different formulation of the axioms, in terms of the K
 </span><span class=""></span><span class="n">p</span><span class="p">.</span><span class="n">setValue</span><span class="p">(</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>This is legal and technically threadsafe. However, it is important to realize that you do not know in which thread <tt>x</tt>, <tt>y</tt>, and/or <tt>z</tt> will execute. Maybe they will execute in Thread A when <tt>p.setValue()</tt> is called. Or, maybe they will execute in Thread B when <tt>f.then</tt> is called. Or, maybe <tt>x</tt> will execute in Thread B, but <tt>y</tt> and/or <tt>z</tt> will execute in Thread A. There's a race between <tt>setValue</tt> and <tt>then</tt>—whichever runs last will execute the callback. The only guarantee is that one of them will run the callback.</p>
+<p>这是合法的，技术上也是线程安全的。但是，要意识到你不知道哪个线程会执行<tt>x</tt>, <tt>y</tt>, 和/或<tt>z</tt>是很重要的。也许它们会在线程A执行当调用<tt>p.setValue()</tt>的时候。或者，它们会在线程B执行当<tt>f.then</tt>被调用的时候。又或者，<tt>x</tt>在线程B执行，但是<tt>y</tt>和/或 <tt>z</tt>在线程A执行。在<tt>setValue</tt>和<tt>then</tt>之间有竞争，最后调用的那个将执行回调。仅仅保证回调会得到执行。</p>
 
-<p>Naturally, you will want some control over which thread executes callbacks. We have a few mechanisms to help.</p>
+<p>正常情况下，你期望控制由哪个线程执行回调，我们有一些机制来帮助你。</p>
 
 <p>The first and most useful is <tt>via</tt>, which passes execution through an <tt>Executor</tt>, which usually has the effect of running the callback in a new thread.</p>
 
