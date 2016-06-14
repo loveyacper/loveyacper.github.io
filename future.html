@@ -107,29 +107,29 @@
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">Future</span><span class="o">&lt;</span><span class="n">GetReply</span><span class="o">&gt;</span><span class=""> </span><span class="n">get</span><span class="p">(</span><span class="n">string</span><span class=""> </span><span class="n">key</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>A <tt>Future&lt;GetReply&gt;</tt> is a placeholder for the <tt>GetReply</tt> that we will eventually get. A Future usually starts life out &quot;unfulfilled&quot;, or incomplete, i.e.:</p>
+<p><tt>Future&lt;GetReply&gt;</tt>是我们最终将要获得的<tt>GetReply</tt>结果的占位符。一个Future一般来说在创建的时候是未被满足的，或者说是未完成的，即:</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">fut</span><span class="p">.</span><span class="n">isReady</span><span class="p">(</span><span class="p">)</span><span class=""> </span><span class="o">=</span><span class="o">=</span><span class=""> </span><span class="nb">false</span><span class="">
 </span><span class="n">fut</span><span class="p">.</span><span class="n">value</span><span class="p">(</span><span class="p">)</span><span class="">  </span><span class="c1">// will throw an exception because the Future is not ready
 </span></pre></div>
 
-<p>At some point in the future, the Future will have been fulfilled, and we can access its value.</p>
+<p>在未来的某一个时间点，Future将会被满足，我们可以访问它的值。</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">fut</span><span class="p">.</span><span class="n">isReady</span><span class="p">(</span><span class="p">)</span><span class=""> </span><span class="o">=</span><span class="o">=</span><span class=""> </span><span class="nb">true</span><span class="">
 </span><span class="n">GetReply</span><span class="o">&amp;</span><span class=""> </span><span class="n">reply</span><span class=""> </span><span class="o">=</span><span class=""> </span><span class="n">fut</span><span class="p">.</span><span class="n">value</span><span class="p">(</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>Futures support exceptions. If something exceptional happened, your Future may represent an exception instead of a value. In that case:</p>
+<p>Futures支持异常，如果有什么异常发生，Future表示一个异常而不是值，在这种情况下:</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">fut</span><span class="p">.</span><span class="n">isReady</span><span class="p">(</span><span class="p">)</span><span class=""> </span><span class="o">=</span><span class="o">=</span><span class=""> </span><span class="nb">true</span><span class="">
 </span><span class="n">fut</span><span class="p">.</span><span class="n">value</span><span class="p">(</span><span class="p">)</span><span class=""> </span><span class="c1">// will rethrow the exception
 </span></pre></div>
 
-<p>Just what is exceptional depends on the API. In our example we have chosen not to raise exceptions for <tt>SERVER_ERROR</tt>, but represent this explicitly in the <tt>GetReply</tt> object. On the other hand, an astute Memcache veteran would notice that we left <tt>CLIENT_ERROR</tt> out of <tt>GetReply::Result</tt>, and perhaps a <tt>CLIENT_ERROR</tt> would have been raised as an exception, because <tt>CLIENT_ERROR</tt> means there&#039;s a bug in the library and this would be truly exceptional. These decisions are judgement calls by the API designer. The important thing is that exceptional conditions (including and especially spurious exceptions that nobody expects) get captured and can be handled higher up the &quot;stack&quot;.</p>
+<p>什么是异常的取决于API。在我们的例子中，我们没有为<tt>SERVER_ERROR</tt>抛出异常,但是显式的在<tt>GetReply</tt>对象展示了这个错误。另一方面，一个聪明的Memcache老手可能注意到了在<tt>GetReply::Result</tt>我们漏了<tt>CLIENT_ERROR</tt>, 而 <tt>CLIENT_ERROR</tt>可能意味着应该抛出异常，因为 <tt>CLIENT_ERROR</tt>意味着库有bug，而这绝对是异常的情况。</p>
 
-<p>So far we have described a way to initiate an asynchronous operation via an API that returns a Future, and then sometime later after it is fulfilled, we get its value. This is slightly more useful than a synchronous API, but it&#039;s not yet ideal. There are two more very important pieces to the puzzle.</p>
+<p>到目前为止，我们描述了一种通过返回Future的API发起异步请求的方法，稍后当Future被满足，我们得到了异步返回值。这比同步API有用的多，但目前还不理想，还有两个非常重要的部分。</p>
 
-<p>First, we can aggregate Futures, to define a new Future that completes after some or all of the aggregated Futures complete. Consider two examples: fetching a batch of requests and waiting for all of them, and fetching a group of requests and waiting for only one of them.</p>
+<p>首先，我们可以收集Future，定义一个在部分或所有被收集的Futures完成后也完成的新Future。 考虑两个例子：发起批量请求并等待他们全部完成，发起批量请求等待其中任意一个完成。</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Future</span><span class="o">&lt;</span><span class="n">GetReply</span><span class="o">&gt;</span><span class="o">&gt;</span><span class=""> </span><span class="n">futs</span><span class="p">;</span><span class="">
 </span><span class=""></span><span class="k">for</span><span class=""> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class=""> </span><span class="n">key</span><span class=""> </span><span class="o">:</span><span class=""> </span><span class="n">keys</span><span class="p">)</span><span class=""> </span><span class="p">&#123;</span><span class="">
@@ -144,9 +144,9 @@
 </span><span class="k">auto</span><span class=""> </span><span class="n">any</span><span class=""> </span><span class="o">=</span><span class=""> </span><span class="n">collectAny</span><span class="p">(</span><span class="n">futs</span><span class="p">.</span><span class="n">begin</span><span class="p">(</span><span class="p">)</span><span class="p">,</span><span class=""> </span><span class="n">futs</span><span class="p">.</span><span class="n">end</span><span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p><tt>all</tt> and <tt>any</tt> are Futures (for the exact type and usage see the header files). They will be complete when all/one of futs are complete, respectively. (There is also <tt>collectN()</tt> for when you need some.)</p>
+<p><tt>all</tt> 和<tt>any</tt>是Futures (详细类型和用法参见头文件).他们分别在所有/某个futs完成后完成。(当你只需要部分futs完成，用<tt>collectN()</tt>)。</p>
 
-<p>Second, we can attach callbacks to a Future, and chain them together monadically. An example will clarify:</p>
+<p>第二，我们可以给Future设置回调函数，并将回调串联起来。用下面这个例子做详细说明：</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">Future</span><span class="o">&lt;</span><span class="n">GetReply</span><span class="o">&gt;</span><span class=""> </span><span class="n">fut1</span><span class=""> </span><span class="o">=</span><span class=""> </span><span class="n">mc</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;</span><span class="s">foo</span><span class="s">&quot;</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class="">
@@ -1262,29 +1262,29 @@ The three laws refer to a different formulation of the axioms, in terms of the K
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">Future</span><span class="o">&lt;</span><span class="n">GetReply</span><span class="o">&gt;</span><span class=""> </span><span class="n">get</span><span class="p">(</span><span class="n">string</span><span class=""> </span><span class="n">key</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>A <tt>Future&lt;GetReply&gt;</tt> is a placeholder for the <tt>GetReply</tt> that we will eventually get. A Future usually starts life out "unfulfilled", or incomplete, i.e.:</p>
+<p><tt>Future&lt;GetReply&gt;</tt>是我们最终将要获得的<tt>GetReply</tt>结果的占位符。一个Future一般来说在创建的时候是未被满足的，或者说是未完成的，即:</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">fut</span><span class="p">.</span><span class="n">isReady</span><span class="p">(</span><span class="p">)</span><span class=""> </span><span class="o">=</span><span class="o">=</span><span class=""> </span><span class="nb">false</span><span class="">
 </span><span class="n">fut</span><span class="p">.</span><span class="n">value</span><span class="p">(</span><span class="p">)</span><span class="">  </span><span class="c1">// will throw an exception because the Future is not ready
 </span></pre></div>
 
-<p>At some point in the future, the Future will have been fulfilled, and we can access its value.</p>
+<p>在未来的某一个时间点，Future将会被满足，我们可以访问它的值。</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">fut</span><span class="p">.</span><span class="n">isReady</span><span class="p">(</span><span class="p">)</span><span class=""> </span><span class="o">=</span><span class="o">=</span><span class=""> </span><span class="nb">true</span><span class="">
 </span><span class="n">GetReply</span><span class="o">&amp;</span><span class=""> </span><span class="n">reply</span><span class=""> </span><span class="o">=</span><span class=""> </span><span class="n">fut</span><span class="p">.</span><span class="n">value</span><span class="p">(</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>Futures support exceptions. If something exceptional happened, your Future may represent an exception instead of a value. In that case:</p>
+<p>Futures支持异常，如果有什么异常发生，Future表示一个异常而不是值，在这种情况下:</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">fut</span><span class="p">.</span><span class="n">isReady</span><span class="p">(</span><span class="p">)</span><span class=""> </span><span class="o">=</span><span class="o">=</span><span class=""> </span><span class="nb">true</span><span class="">
 </span><span class="n">fut</span><span class="p">.</span><span class="n">value</span><span class="p">(</span><span class="p">)</span><span class=""> </span><span class="c1">// will rethrow the exception
 </span></pre></div>
 
-<p>Just what is exceptional depends on the API. In our example we have chosen not to raise exceptions for <tt>SERVER_ERROR</tt>, but represent this explicitly in the <tt>GetReply</tt> object. On the other hand, an astute Memcache veteran would notice that we left <tt>CLIENT_ERROR</tt> out of <tt>GetReply::Result</tt>, and perhaps a <tt>CLIENT_ERROR</tt> would have been raised as an exception, because <tt>CLIENT_ERROR</tt> means there's a bug in the library and this would be truly exceptional. These decisions are judgement calls by the API designer. The important thing is that exceptional conditions (including and especially spurious exceptions that nobody expects) get captured and can be handled higher up the "stack".</p>
+<p>什么是异常的取决于API。在我们的例子中，我们没有为<tt>SERVER_ERROR</tt>抛出异常,但是显式的在<tt>GetReply</tt>对象展示了这个错误。另一方面，一个聪明的Memcache老手可能注意到了在<tt>GetReply::Result</tt>我们漏了<tt>CLIENT_ERROR</tt>, 而 <tt>CLIENT_ERROR</tt>可能意味着应该抛出异常，因为 <tt>CLIENT_ERROR</tt>意味着库有bug，而这绝对是异常的情况。</p>
 
-<p>So far we have described a way to initiate an asynchronous operation via an API that returns a Future, and then sometime later after it is fulfilled, we get its value. This is slightly more useful than a synchronous API, but it's not yet ideal. There are two more very important pieces to the puzzle.</p>
+<p>到目前为止，我们描述了一种通过返回Future的API发起异步请求的方法，稍后当Future被满足，我们得到了异步返回值。这比同步API有用的多，但目前还不理想，还有两个非常重要的部分。</p>
 
-<p>First, we can aggregate Futures, to define a new Future that completes after some or all of the aggregated Futures complete. Consider two examples: fetching a batch of requests and waiting for all of them, and fetching a group of requests and waiting for only one of them.</p>
+<p>首先，我们可以收集Future，定义一个在部分或所有被收集的Futures完成后也完成的新Future。 考虑两个例子：发起批量请求并等待他们全部完成，发起批量请求等待其中任意一个完成。</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Future</span><span class="o">&lt;</span><span class="n">GetReply</span><span class="o">&gt;</span><span class="o">&gt;</span><span class=""> </span><span class="n">futs</span><span class="p">;</span><span class="">
 </span><span class=""></span><span class="k">for</span><span class=""> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class=""> </span><span class="n">key</span><span class=""> </span><span class="o">:</span><span class=""> </span><span class="n">keys</span><span class="p">)</span><span class=""> </span><span class="p">{</span><span class="">
@@ -1299,9 +1299,9 @@ The three laws refer to a different formulation of the axioms, in terms of the K
 </span><span class="k">auto</span><span class=""> </span><span class="n">any</span><span class=""> </span><span class="o">=</span><span class=""> </span><span class="n">collectAny</span><span class="p">(</span><span class="n">futs</span><span class="p">.</span><span class="n">begin</span><span class="p">(</span><span class="p">)</span><span class="p">,</span><span class=""> </span><span class="n">futs</span><span class="p">.</span><span class="n">end</span><span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p><tt>all</tt> and <tt>any</tt> are Futures (for the exact type and usage see the header files). They will be complete when all/one of futs are complete, respectively. (There is also <tt>collectN()</tt> for when you need some.)</p>
+<p><tt>all</tt> 和<tt>any</tt>是Futures (详细类型和用法参见头文件).他们分别在所有/某个futs完成后完成。(当你只需要部分futs完成，用<tt>collectN()</tt>)。</p>
 
-<p>Second, we can attach callbacks to a Future, and chain them together monadically. An example will clarify:</p>
+<p>第二，我们可以给Future设置回调函数，并将回调串联起来。用下面这个例子做详细说明：</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">Future</span><span class="o">&lt;</span><span class="n">GetReply</span><span class="o">&gt;</span><span class=""> </span><span class="n">fut1</span><span class=""> </span><span class="o">=</span><span class=""> </span><span class="n">mc</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"</span><span class="s">foo</span><span class="s">"</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class="">
