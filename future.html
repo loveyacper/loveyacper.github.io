@@ -254,7 +254,7 @@
 </span><span class="">  </span><span class=""></span><span class="p">&#125;</span><span class="">
 </span><span class="">  </span><span class="c1">// Any exceptions that we didn&#039;t catch, will be caught for us
 </span><span class="p">&#125;</span><span class="p">)</span><span class="p">;</span><span class="">
-</span><span class=""></span></pre></div></section><section class="dex_document"><h1>更多细节</h1><p class="dex_introduction"></p><p>Let&#039;s look at a contrived and synchronous example of Futures.</p>
+</span><span class=""></span></pre></div></section><section class="dex_document"><h1>更多细节</h1><p class="dex_introduction"></p><p>让我们看一个捏造的关于Futures的同步代码例子.</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">Promise</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class=""> </span><span class="n">p</span><span class="p">;</span><span class="">
 </span><span class=""></span><span class="n">Future</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class=""> </span><span class="n">f</span><span class=""> </span><span class="o">=</span><span class=""> </span><span class="n">p</span><span class="p">.</span><span class="n">getFuture</span><span class="p">(</span><span class="p">)</span><span class="p">;</span><span class="">
@@ -263,15 +263,15 @@
 </span><span class=""></span><span class="n">cout</span><span class=""> </span><span class="o">&lt;</span><span class="o">&lt;</span><span class=""> </span><span class="n">f</span><span class="p">.</span><span class="n">value</span><span class="p">(</span><span class="p">)</span><span class="p">;</span><span class=""> </span><span class="c1">// prints 42
 </span><span class=""></span></pre></div>
 
-<p>First, we create a <a href="https://github.com/facebook/folly/blob/master/folly/futures/Promise.h" target="_blank">Promise</a> object of type <tt>int</tt>. This object is exactly what it sounds like&#x2014;a pledge to provide an <tt>int</tt> (or an exception) at some point in the future.</p>
+<p>首先，我们创建了一个<tt>int</tt>类型的<a href="https://github.com/facebook/folly/blob/master/folly/futures/Promise.h" target="_blank">Promise</a>对象。这个对象正如其名&#x2014;保证在未来某一刻提供一个<tt>int</tt> (或者一个异常)。</p>
 
-<p>Next, we extract a <a href="https://github.com/facebook/folly/blob/master/folly/futures/Future.h" target="_blank">Future</a> object from that promise. You can think of futures as handles on promises - they provide a way to access that <tt>int</tt> when the promise is fulfilled.</p>
+<p>然后，我们从这个promise提取了一个<a href="https://github.com/facebook/folly/blob/master/folly/futures/Future.h" target="_blank">Future</a>对象。你可以认为futures是promises的控制杆 - 当承诺兑现的时候，他们提供了一种访问<tt>int</tt>的方法。</p>
 
-<p>Later, when the promise is fulfilled via <tt>setValue()</tt> or <tt>setException()</tt>, that <tt>int</tt> is accessible via the future&#039;s <tt>value()</tt> method. That method will throw if the future contains an exception.</p>
+<p>最后，通过<tt>setValue()</tt>或<tt>setException()</tt>兑现了承诺，通过future的<tt>value()</tt>可以访问那个<tt>int</tt>了。如果future含有异常则这个方法将抛出该异常。</p>
 
-<h2 id="setting-callbacks-with-t">Setting callbacks with then() <a href="#setting-callbacks-with-t" class="headerLink">#</a></h2>
+<h2 id="setting-callbacks-with-t">用then()设置回调函数 <a href="#setting-callbacks-with-t" class="headerLink">#</a></h2>
 
-<p>Ok, great, so now you&#039;re wondering what these are actually useful for. Let&#039;s consider another way to follow up on the result of a <tt>Future</tt> once its corresponding <tt>Promise</tt> is fulfilled&#x2014;callbacks! Here&#039;s a snippet that is functionally equivalent to the one above:</p>
+<p>嗯，很好，现在你想知道这究竟有什么用。让我们考虑下当兑现承诺时另一种处理<tt>Future</tt>结果的方法&#x2014;回调函数! 这里有一个和上面功能完全等价的代码片段：</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">Promise</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class=""> </span><span class="n">p</span><span class="p">;</span><span class="">
 </span><span class=""></span><span class="n">Future</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class=""> </span><span class="n">f</span><span class=""> </span><span class="o">=</span><span class=""> </span><span class="n">p</span><span class="p">.</span><span class="n">getFuture</span><span class="p">(</span><span class="p">)</span><span class="p">;</span><span class="">
@@ -283,7 +283,7 @@
 </span><span class=""></span><span class="n">p</span><span class="p">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>That <tt>then()</tt> method on futures is the real bread and butter of Futures code. It allows you to provide a callback which will be executed when that <tt>Future</tt> is complete. Note that while we fulfill the promise after setting the callback here, those operations could be swapped. Setting a callback on an already completed future executes the callback immediately.</p>
+<p>futures的<tt>then()</tt>方法是关于Futures代码的真正核心.它允许你提供一个回调函数，当<tt>Future</tt>完成的时候被执行。注意我们在设置回调之后兑现了承诺，这两个操作也可以交换顺序。 在一个已完成的future上设置回调将会立即得到执行。</p>
 
 <p>In this case, the callback takes a value directly. If the Future contained an exception, the callback will be passed over and the exception will be propagated to the resultant Future - more on that in a second. Your callback may also take a <a href="https://github.com/facebook/folly/blob/master/folly/Try.h" target="_blank">Try</a>, which encapsulates either an exception or a value of its templated type.</p>
 
@@ -1409,7 +1409,7 @@ The three laws refer to a different formulation of the axioms, in terms of the K
 </span><span class="">  </span><span class=""></span><span class="p">}</span><span class="">
 </span><span class="">  </span><span class="c1">// Any exceptions that we didn't catch, will be caught for us
 </span><span class="p">}</span><span class="p">)</span><span class="p">;</span><span class="">
-</span><span class=""></span></pre></div></section><section class="dex_document"><h1>更多细节</h1><p class="dex_introduction"></p><p>Let's look at a contrived and synchronous example of Futures.</p>
+</span><span class=""></span></pre></div></section><section class="dex_document"><h1>更多细节</h1><p class="dex_introduction"></p><p>让我们看一个捏造的关于Futures的同步代码例子.</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">Promise</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class=""> </span><span class="n">p</span><span class="p">;</span><span class="">
 </span><span class=""></span><span class="n">Future</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class=""> </span><span class="n">f</span><span class=""> </span><span class="o">=</span><span class=""> </span><span class="n">p</span><span class="p">.</span><span class="n">getFuture</span><span class="p">(</span><span class="p">)</span><span class="p">;</span><span class="">
@@ -1418,15 +1418,15 @@ The three laws refer to a different formulation of the axioms, in terms of the K
 </span><span class=""></span><span class="n">cout</span><span class=""> </span><span class="o">&lt;</span><span class="o">&lt;</span><span class=""> </span><span class="n">f</span><span class="p">.</span><span class="n">value</span><span class="p">(</span><span class="p">)</span><span class="p">;</span><span class=""> </span><span class="c1">// prints 42
 </span><span class=""></span></pre></div>
 
-<p>First, we create a <a href="https://github.com/facebook/folly/blob/master/folly/futures/Promise.h" target="_blank">Promise</a> object of type <tt>int</tt>. This object is exactly what it sounds like—a pledge to provide an <tt>int</tt> (or an exception) at some point in the future.</p>
+<p>首先，我们创建了一个<tt>int</tt>类型的<a href="https://github.com/facebook/folly/blob/master/folly/futures/Promise.h" target="_blank">Promise</a>对象。这个对象正如其名—保证在未来某一刻提供一个<tt>int</tt> (或者一个异常)。</p>
 
-<p>Next, we extract a <a href="https://github.com/facebook/folly/blob/master/folly/futures/Future.h" target="_blank">Future</a> object from that promise. You can think of futures as handles on promises - they provide a way to access that <tt>int</tt> when the promise is fulfilled.</p>
+<p>然后，我们从这个promise提取了一个<a href="https://github.com/facebook/folly/blob/master/folly/futures/Future.h" target="_blank">Future</a>对象。你可以认为futures是promises的控制杆 - 当承诺兑现的时候，他们提供了一种访问<tt>int</tt>的方法。</p>
 
-<p>Later, when the promise is fulfilled via <tt>setValue()</tt> or <tt>setException()</tt>, that <tt>int</tt> is accessible via the future's <tt>value()</tt> method. That method will throw if the future contains an exception.</p>
+<p>最后，通过<tt>setValue()</tt>或<tt>setException()</tt>兑现了承诺，通过future的<tt>value()</tt>可以访问那个<tt>int</tt>了。如果future含有异常则这个方法将抛出该异常。</p>
 
-<h2 id="setting-callbacks-with-t">Setting callbacks with then() <a href="#setting-callbacks-with-t" class="headerLink">#</a></h2>
+<h2 id="setting-callbacks-with-t">用then()设置回调函数 <a href="#setting-callbacks-with-t" class="headerLink">#</a></h2>
 
-<p>Ok, great, so now you're wondering what these are actually useful for. Let's consider another way to follow up on the result of a <tt>Future</tt> once its corresponding <tt>Promise</tt> is fulfilled—callbacks! Here's a snippet that is functionally equivalent to the one above:</p>
+<p>嗯，很好，现在你想知道这究竟有什么用。让我们考虑下当兑现承诺时另一种处理<tt>Future</tt>结果的方法—回调函数! 这里有一个和上面功能完全等价的代码片段：</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class=""></span><span class="n">Promise</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class=""> </span><span class="n">p</span><span class="p">;</span><span class="">
 </span><span class=""></span><span class="n">Future</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class=""> </span><span class="n">f</span><span class=""> </span><span class="o">=</span><span class=""> </span><span class="n">p</span><span class="p">.</span><span class="n">getFuture</span><span class="p">(</span><span class="p">)</span><span class="p">;</span><span class="">
@@ -1438,7 +1438,7 @@ The three laws refer to a different formulation of the axioms, in terms of the K
 </span><span class=""></span><span class="n">p</span><span class="p">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>That <tt>then()</tt> method on futures is the real bread and butter of Futures code. It allows you to provide a callback which will be executed when that <tt>Future</tt> is complete. Note that while we fulfill the promise after setting the callback here, those operations could be swapped. Setting a callback on an already completed future executes the callback immediately.</p>
+<p>futures的<tt>then()</tt>方法是关于Futures代码的真正核心.它允许你提供一个回调函数，当<tt>Future</tt>完成的时候被执行。注意我们在设置回调之后兑现了承诺，这两个操作也可以交换顺序。 在一个已完成的future上设置回调将会立即得到执行。</p>
 
 <p>In this case, the callback takes a value directly. If the Future contained an exception, the callback will be passed over and the exception will be propagated to the resultant Future - more on that in a second. Your callback may also take a <a href="https://github.com/facebook/folly/blob/master/folly/Try.h" target="_blank">Try</a>, which encapsulates either an exception or a value of its templated type.</p>
 
