@@ -166,13 +166,13 @@
 </span><span class="">  </span><span class=""></span><span class="p">&#125;</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>That example is a little contrived but the idea is that you can transform a result from one type to another, potentially in a chain, and unhandled errors propagate. Of course, the intermediate variables are optional.</p>
+<p>这个例子有点做作，但思想是你可以对结果做类型转换，在调用链中传递，并能传播未处理的错误。当然，中间变量是不必要的。</p>
 
-<p>Using then to add callbacks is idiomatic. It brings all the code into one place, which avoids callback hell.</p>
+<p>使用then()添加回调函数是惯用法。它使得代码紧凑，避免了callback hell。</p>
 
-<p>Up to this point we have skirted around the matter of waiting for Futures. You may never need to wait for a Future, because your code is event-driven and all follow-up action happens in a then-block. But if want to have a batch workflow, where you initiate a batch of asynchronous operations and then wait for them all to finish at a synchronization point, then you will want to wait for a Future. Futures have a blocking method called <tt>wait()</tt> that does exactly that and optionally takes a timeout.</p>
+<p>到目前为止，我们绕过了等待Futures。也许你永远都不会等待一个Future，因为你的代码是事件驱动的，所有接下来的操作都在then()指定了。但是如果想要一个批处理工作流，你可以批量发起异步请求，然后等待他们全部完成。这种情况你期望等待一个Future。Futures有一个阻塞的方法叫做<tt>wait()</tt>做这样的事情，并有一个timeout的可选参数。</p>
 
-<p>Futures are partially threadsafe. A Promise or Future can migrate between threads as long as there&#039;s a full memory barrier of some sort. <tt>Future::then</tt> and <tt>Promise::setValue</tt> (and all variants that boil down to those two calls) can be called from different threads. <strong>But</strong>, be warned that you might be surprised about which thread your callback executes on. Let&#039;s consider an example.</p>
+<p>Futures是部分线程安全的。一个Promise或Future能够在线程间转移只要有足够的内存屏障。<tt>Future::then</tt>和<tt>Promise::setValue</tt> (以及所有在此之上的变种)能够在不同线程被调用. <strong>但是</strong>,请注意也许你会对哪个线程执行你的回调感到惊讶。让我们看一个例子。</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class="c1">// Thread A
 </span><span class=""></span><span class="n">Promise</span><span class="o">&lt;</span><span class="n">Unit</span><span class="o">&gt;</span><span class=""> </span><span class="n">p</span><span class="p">;</span><span class="">
@@ -1321,13 +1321,13 @@ The three laws refer to a different formulation of the axioms, in terms of the K
 </span><span class="">  </span><span class=""></span><span class="p">}</span><span class="p">)</span><span class="p">;</span><span class="">
 </span><span class=""></span></pre></div>
 
-<p>That example is a little contrived but the idea is that you can transform a result from one type to another, potentially in a chain, and unhandled errors propagate. Of course, the intermediate variables are optional.</p>
+<p>这个例子有点做作，但思想是你可以对结果做类型转换，在调用链中传递，并能传播未处理的错误。当然，中间变量是不必要的。</p>
 
-<p>Using then to add callbacks is idiomatic. It brings all the code into one place, which avoids callback hell.</p>
+<p>使用then()添加回调函数是惯用法。它使得代码紧凑，避免了callback hell。</p>
 
-<p>Up to this point we have skirted around the matter of waiting for Futures. You may never need to wait for a Future, because your code is event-driven and all follow-up action happens in a then-block. But if want to have a batch workflow, where you initiate a batch of asynchronous operations and then wait for them all to finish at a synchronization point, then you will want to wait for a Future. Futures have a blocking method called <tt>wait()</tt> that does exactly that and optionally takes a timeout.</p>
+<p>到目前为止，我们绕过了等待Futures。也许你永远都不会等待一个Future，因为你的代码是事件驱动的，所有接下来的操作都在then()指定了。但是如果想要一个批处理工作流，你可以批量发起异步请求，然后等待他们全部完成。这种情况你期望等待一个Future。Futures有一个阻塞的方法叫做<tt>wait()</tt>做这样的事情，并有一个timeout的可选参数。</p>
 
-<p>Futures are partially threadsafe. A Promise or Future can migrate between threads as long as there's a full memory barrier of some sort. <tt>Future::then</tt> and <tt>Promise::setValue</tt> (and all variants that boil down to those two calls) can be called from different threads. <strong>But</strong>, be warned that you might be surprised about which thread your callback executes on. Let's consider an example.</p>
+<p>Futures是部分线程安全的。一个Promise或Future能够在线程间转移只要有足够的内存屏障。<tt>Future::then</tt>和<tt>Promise::setValue</tt> (以及所有在此之上的变种)能够在不同线程被调用. <strong>但是</strong>,请注意也许你会对哪个线程执行你的回调感到惊讶。让我们看一个例子。</p>
 
 <div class="remarkup-code-block" data-code-lang="cpp"><pre class="remarkup-code"><span class="c1">// Thread A
 </span><span class=""></span><span class="n">Promise</span><span class="o">&lt;</span><span class="n">Unit</span><span class="o">&gt;</span><span class=""> </span><span class="n">p</span><span class="p">;</span><span class="">
