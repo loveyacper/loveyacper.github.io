@@ -44,7 +44,8 @@ future.then([] (const std::string& response) {
 
 // get的实现是，创建协程，协程内部发送请求，并创建future yield出去。
 ```
-可惜C++11的future基本是废材不可用，连callback都不支持，唉。协程我可以自己撸，再撸future实在吐了。
+可惜C++11的future基本是废材不可用，连callback都不支持，唉。协程我可以自己撸，再撸future实在吐了。顺便吐槽一下C++，0x是为了啥加入了并发相关的，async一言不合就开线程、promise、future都是一坨屎。想起了当年的auto_ptr，你们这些垃圾是怎么进标准库的。也难怪初学者不再选择C艹，这么多人恶心C艹。
+
 网上看到的scala客户端倒是很符合我的意图：
 ```scala
 import redis.RedisClient
@@ -89,8 +90,9 @@ future.then([] (const std::string&amp; response) {
 // get的实现是，创建协程，协程内部发送请求，并创建future yield出去。
 </code></pre>
 
-<p>可惜C++11的future基本是废材不可用，连callback都不支持，唉。协程我可以自己撸，再撸future实在吐了。
-网上看到的scala客户端倒是很符合我的意图：</p>
+<p>可惜C++11的future基本是废材不可用，连callback都不支持，唉。协程我可以自己撸，再撸future实在吐了。顺便吐槽一下C++，0x是为了啥加入了并发相关的，async一言不合就开线程、promise、future都是一坨屎。想起了当年的auto_ptr，你们这些垃圾是怎么进标准库的。也难怪初学者不再选择C艹，这么多人恶心C艹。</p>
+
+<p>网上看到的scala客户端倒是很符合我的意图：</p>
 
 <pre><code class="scala">import redis.RedisClient
 import scala.concurrent.Await
