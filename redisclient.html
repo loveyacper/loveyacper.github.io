@@ -44,6 +44,29 @@ future.then([] (const std::string& response) {
 
 // get的实现是，创建协程，协程内部发送请求，并创建future yield出去。
 ```
+可惜C++11的future基本是废材不可用，连callback都不支持，唉。协程我可以自己撸，再撸future实在吐了。
+网上看到的scala客户端倒是很符合我的意图：
+```scala
+import redis.RedisClient
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
+ 
+object Main extends App {
+  implicit val akkaSystem = akka.actor.ActorSystem()
+ 
+  val redis = RedisClient()
+ 
+  val futurePong = redis.ping()   // 这里也是返回future
+  println("Ping sent!")
+  futurePong.map(pong => {  // 相当于then，给future注册callback
+    println(s"Redis replied with a $pong")
+  })
+  Await.result(futurePong, 5 seconds) //  大概是最多等待5s再退出程序吧
+ 
+  akkaSystem.shutdown()
+}
+```
 
 <!-- markdown end -->
 </div>
@@ -64,6 +87,30 @@ future.then([] (const std::string&amp; response) {
 });
 
 // get的实现是，创建协程，协程内部发送请求，并创建future yield出去。
+</code></pre>
+
+<p>可惜C++11的future基本是废材不可用，连callback都不支持，唉。协程我可以自己撸，再撸future实在吐了。
+网上看到的scala客户端倒是很符合我的意图：</p>
+
+<pre><code class="scala">import redis.RedisClient
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
+
+object Main extends App {
+  implicit val akkaSystem = akka.actor.ActorSystem()
+
+  val redis = RedisClient()
+
+  val futurePong = redis.ping()   // 这里也是返回future
+  println("Ping sent!")
+  futurePong.map(pong =&gt; {  // 相当于then，给future注册callback
+    println(s"Redis replied with a $pong")
+  })
+  Await.result(futurePong, 5 seconds) //  大概是最多等待5s再退出程序吧
+
+  akkaSystem.shutdown()
+}
 </code></pre></section></section>
 <!-- content end -->
 </div>
