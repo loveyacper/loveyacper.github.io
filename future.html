@@ -326,11 +326,11 @@
 
 <h2 id="futures-promises-and-mov">Futures, Promises, 和move语义<a href="#futures-promises-and-mov" class="headerLink">#</a></h2>
 
-<p><tt>Futures</tt> and <tt>Promises</tt> are movable but non-copyable. This preserves the invariant of a one-to-one mapping between a Promise and a Future and as a side effect encourages performant code. There is a piece of heap-allocated shared state underlying each promise-future pair&#x2014;keep this in mind as a bare minimum performance cost.</p>
+<p><tt>Futures</tt>和<tt>Promises</tt>是可移动的但是不可拷贝。这保证了Promise和Future的一一对应关系。每对promise-future在底层共享一个基于堆分配的state对象&#x2014;这是仅有的开销，牢记这一点。.</p>
 
-<h2 id="synchronously-creating-a">Synchronously creating and completing futures <a href="#synchronously-creating-a" class="headerLink">#</a></h2>
+<h2 id="synchronously-creating-a">同步创建和完成futures <a href="#synchronously-creating-a" class="headerLink">#</a></h2>
 
-<p>Synchronously entering and exiting the futures paradigm can be useful, especially in tests, so the following utilities are available:</p>
+<p>同步进入和退出futures的范式是有用的， 特别是对于测试，所以有了以下组件:</p>
 
 <ul>
 <li>Create already-completed futures with <tt>makeFuture&lt;T&gt;()</tt>, which takes a <tt>T&amp;&amp;</tt> (or an exception, more info <a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14604">here</a>). If you pass <tt>T&amp;&amp;</tt> the type is inferred and you don&#039;t have to specify it.</li>
@@ -1481,11 +1481,11 @@ The three laws refer to a different formulation of the axioms, in terms of the K
 
 <h2 id="futures-promises-and-mov">Futures, Promises, 和move语义<a href="#futures-promises-and-mov" class="headerLink">#</a></h2>
 
-<p><tt>Futures</tt> and <tt>Promises</tt> are movable but non-copyable. This preserves the invariant of a one-to-one mapping between a Promise and a Future and as a side effect encourages performant code. There is a piece of heap-allocated shared state underlying each promise-future pair—keep this in mind as a bare minimum performance cost.</p>
+<p><tt>Futures</tt>和<tt>Promises</tt>是可移动的但是不可拷贝。这保证了Promise和Future的一一对应关系。每对promise-future在底层共享一个基于堆分配的state对象—这是仅有的开销，牢记这一点。.</p>
 
-<h2 id="synchronously-creating-a">Synchronously creating and completing futures <a href="#synchronously-creating-a" class="headerLink">#</a></h2>
+<h2 id="synchronously-creating-a">同步创建和完成futures <a href="#synchronously-creating-a" class="headerLink">#</a></h2>
 
-<p>Synchronously entering and exiting the futures paradigm can be useful, especially in tests, so the following utilities are available:</p>
+<p>同步进入和退出futures的范式是有用的， 特别是对于测试，所以有了以下组件:</p>
 
 
 <ul>
