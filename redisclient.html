@@ -69,6 +69,28 @@ object Main extends App {
 }
 ```
 
+## 后记 2016 06
+上述方案返回了future，和js的promise很像，其实还是显式使用回调，需要设置callback。
+
+最近看了一下tornado的协程源码，很赞，表现很像`async/await`，避免了回调。趁着周末我简单撸了一个redis client，目前只是能work，放在了[我的github](https://github.com/loveyacper/pyredis)上。示例代码如下：
+
+```python
+# the @coroutine looks like async keyword
+@coroutine
+def sample_redis_client(port = 6379):
+    from redisc.redisclient import getConn, get, set
+
+    # get connection, may from pool, may async connect to redis, whatever
+    redis = yield getConn(port = port)
+
+    # get remote slogon from redis, yield looks like await keyword
+    slogan = yield get(redis, "slogan")
+
+    # you can get multiple keys from redis concurrently!!!
+    name, age = yield [get(redis, "name"), get(redis, "age")]
+    print("got from redis : name " + str(name) + ", and age " + str(age))
+```
+
 <!-- markdown end -->
 </div>
 <div class="entry" id="main">
@@ -113,6 +135,28 @@ object Main extends App {
 
   akkaSystem.shutdown()
 }
+</code></pre>
+
+<h2 id="201606">后记 2016 06</h2>
+
+<p>上述方案返回了future，和js的promise很像，其实还是显式使用回调，需要设置callback。</p>
+
+<p>最近看了一下tornado的协程源码，很赞，表现很像<code>async/await</code>，避免了回调。趁着周末我简单撸了一个redis client，目前只是能work，放在了<a href="https://github.com/loveyacper/pyredis">我的github</a>上。示例代码如下：</p>
+
+<pre><code class="python"># the @coroutine looks like async keyword
+@coroutine
+def sample_redis_client(port = 6379):
+    from redisc.redisclient import getConn, get, set
+
+    # get connection, may from pool, may async connect to redis, whatever
+    redis = yield getConn(port = port)
+
+    # get remote slogon from redis, yield looks like await keyword
+    slogan = yield get(redis, "slogan")
+
+    # you can get multiple keys from redis concurrently!!!
+    name, age = yield [get(redis, "name"), get(redis, "age")]
+    print("got from redis : name " + str(name) + ", and age " + str(age))
 </code></pre></section></section>
 <!-- content end -->
 </div>
