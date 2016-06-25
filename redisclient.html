@@ -26,7 +26,7 @@
 <div id="md" style="display: none;">
 <!-- markdown -->
 
-<section class="dex_guide"><h1 class="dex_title">基于Future和协程的redis客户端</h1><section class="dex_document"><h1></h1><p class="dex_introduction">关于一个异步的C++ redis客户端的假想。</p>
+<section class="dex_guide"><h1 class="dex_title">基于Future和协程的redis客户端</h1><h1></h1><p class="dex_introduction">关于一个异步的C++ redis客户端的假想。</p>
 
 
 
@@ -44,9 +44,9 @@ future.then([] (const std::string& response) {
 
 // get的实现是，创建协程，协程内部发送请求，并创建future yield出去。
 ```
-可惜C++11的future基本是废材不可用，连callback都不支持，唉。协程我可以自己撸，再撸future实在吐了。顺便吐槽一下C++，0x是为了啥加入了并发相关的，async一言不合就开线程、promise、future都是一坨屎。想起了当年的auto_ptr，你们这些垃圾是怎么进标准库的。也难怪初学者不再选择C艹，这么多人恶心C艹。
+可惜C++11的future基本是废材不可用，连callback都不支持，唉。协程我可以自己撸，再撸future实在吐了。顺便吐槽一下C++，0x是为了啥加入了并发相关的，async一言不合就开线程、promise、future都是一坨屎。想起了当年的auto_ptr，你们这些垃圾是怎么进标准库的。也难怪初学者不再选择C艹，这么多人恶心C艹，自己不争气啊。。
 
-网上看到的scala客户端倒是很符合我的意图：
+又搜了一下scala的客户端，接口基本和我的意图吻合：
 ```scala
 import redis.RedisClient
 import scala.concurrent.Await
@@ -70,7 +70,7 @@ object Main extends App {
 ```
 
 ## 后记 2016 06
-上述方案返回了future，和js的promise很像，其实还是显式使用回调，需要设置callback。
+上述方案返回了future，和jquery的promise很像，其实还是显式使用回调，需要设置callback。
 
 最近看了一下tornado的协程源码，很赞，表现很像`async/await`，避免了回调。趁着周末我简单撸了一个redis client，目前只是能work，放在了[我的github](https://github.com/loveyacper/pyredis)上。示例代码如下：
 
@@ -95,7 +95,7 @@ def sample_redis_client(port = 6379):
 </div>
 <div class="entry" id="main">
 <!-- content -->
-<p></p><section class="dex_guide"><h1 class="dex_title">基于Future和协程的redis客户端</h1><section class="dex_document"><h1></h1><p class="dex_introduction">关于一个异步的C++ redis客户端的假想。</p><p></p>
+<p></p><section class="dex_guide"><h1 class="dex_title">基于Future和协程的redis客户端</h1><h1></h1><p class="dex_introduction">关于一个异步的C++ redis客户端的假想。</p><p></p>
 
 <h2 id="brief-synopsis">代码 <a href="#brief-synopsis" class="headerLink">#</a></h2>
 
@@ -112,9 +112,9 @@ future.then([] (const std::string&amp; response) {
 // get的实现是，创建协程，协程内部发送请求，并创建future yield出去。
 </code></pre>
 
-<p>可惜C++11的future基本是废材不可用，连callback都不支持，唉。协程我可以自己撸，再撸future实在吐了。顺便吐槽一下C++，0x是为了啥加入了并发相关的，async一言不合就开线程、promise、future都是一坨屎。想起了当年的auto_ptr，你们这些垃圾是怎么进标准库的。也难怪初学者不再选择C艹，这么多人恶心C艹。</p>
+<p>可惜C++11的future基本是废材不可用，连callback都不支持，唉。协程我可以自己撸，再撸future实在吐了。顺便吐槽一下C++，0x是为了啥加入了并发相关的，async一言不合就开线程、promise、future都是一坨屎。想起了当年的auto_ptr，你们这些垃圾是怎么进标准库的。也难怪初学者不再选择C艹，这么多人恶心C艹，自己不争气啊。。</p>
 
-<p>网上看到的scala客户端倒是很符合我的意图：</p>
+<p>又搜了一下scala的客户端，接口基本和我的意图吻合：</p>
 
 <pre><code class="scala">import redis.RedisClient
 import scala.concurrent.Await
@@ -139,7 +139,7 @@ object Main extends App {
 
 <h2 id="201606">后记 2016 06</h2>
 
-<p>上述方案返回了future，和js的promise很像，其实还是显式使用回调，需要设置callback。</p>
+<p>上述方案返回了future，和jquery的promise很像，其实还是显式使用回调，需要设置callback。</p>
 
 <p>最近看了一下tornado的协程源码，很赞，表现很像<code>async/await</code>，避免了回调。趁着周末我简单撸了一个redis client，目前只是能work，放在了<a href="https://github.com/loveyacper/pyredis">我的github</a>上。示例代码如下：</p>
 
@@ -157,7 +157,7 @@ def sample_redis_client(port = 6379):
     # you can get multiple keys from redis concurrently!!!
     name, age = yield [get(redis, "name"), get(redis, "age")]
     print("got from redis : name " + str(name) + ", and age " + str(age))
-</code></pre></section></section>
+</code></pre></section>
 <!-- content end -->
 </div>
 <br>
