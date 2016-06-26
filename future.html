@@ -335,13 +335,13 @@
 <ul>
 <li>用<tt>makeFuture&lt;T&gt;()</tt>创建一个已完成future，它接收一个<tt>T&amp;&amp;</tt> (或者一个异常, 详见<a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14604">这里</a>). </li>
 <li>用<tt>Future&lt;T&gt;::get()</tt>提取future的T类型值. 这个方法是阻塞的，所以请确保要么你的future已经完成了，或者当你的线程等待的时候有其它线程会完成这个future。<tt>get()</tt>也接收一个timeout&#x2014;见 <a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14677">Timeouts</a>.</li>
-<li>Perform a blocking wait on a Future with <tt>Future&lt;T&gt;::wait()</tt>. This is just like <tt>get()</tt> but it instead of extracting the value or throwing the exception, <tt>wait()</tt> returns a new Future with the result of the input Future. Like <tt>get()</tt>, <tt>wait()</tt> can also take a timeout&#x2014;see <a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14677">Timeouts</a>.</li>
-<li><tt>getVia()</tt> and <tt>waitVia()</tt>, which are like <tt>get()</tt> and <tt>wait()</tt> except that they drive some Executor (say, an <tt>EventBase</tt>) until the Future is complete. See <a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14606">Testing</a> for more.</li>
+<li>用<tt>Future&lt;T&gt;::wait()</tt>阻塞等待future. 这和<tt>get()</tt>很相似，但是它不会提取值或者抛出异常，而是返回包含输入future结果的新future。<tt>wait()</tt> 也接收一个timeout&#x2014;见<a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14677">Timeouts</a>.</li>
+<li><tt>getVia()</tt> 和 <tt>waitVia()</tt>, 与<tt>get()</tt> 、 <tt>wait()</tt>类似，除了它们驱动一些 Executor (比如, 一个<tt>EventBase</tt>) 直到Future完成. 更多详见<a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14606">Testing</a>.</li>
 </ul>
 
-<div class="remarkup-note"><span class="remarkup-note-word">NOTE:</span> <tt>makeFuture()</tt>, <tt>get()</tt>, <tt>wait()</tt>, and friends are especially handy in tests and are documented further in the <a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14606">Testing</a> article.</div>
+<div class="remarkup-note"><span class="remarkup-note-word">NOTE:</span> <tt>makeFuture()</tt>, <tt>get()</tt>, <tt>wait()</tt>族函数很方便测试，更详细的文档在 <a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14606">Testing</a> 一文.</div>
 
-<h2 id="overloads-of-then">Overloads of then() <a href="#overloads-of-then" class="headerLink">#</a></h2>
+<h2 id="overloads-of-then">then() 的重载<a href="#overloads-of-then" class="headerLink">#</a></h2>
 
 <p>Above are demonstrations of variants of <tt>then()</tt> whose callbacks</p>
 
@@ -1491,14 +1491,14 @@ The three laws refer to a different formulation of the axioms, in terms of the K
 <ul>
 <li>用<tt>makeFuture&lt;T&gt;()</tt>创建一个已完成future，它接收一个<tt>T&amp;&amp;</tt> (或者一个异常, 详见<a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14604">这里</a>). </li>
 <li>用<tt>Future&lt;T&gt;::get()</tt>提取future的T类型值. 这个方法是阻塞的，所以请确保要么你的future已经完成了，或者当你的线程等待的时候有其它线程会完成这个future。<tt>get()</tt>也接收一个timeout—见 <a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14677">Timeouts</a>.</li>
-<li>Perform a blocking wait on a Future with <tt>Future&lt;T&gt;::wait()</tt>. This is just like <tt>get()</tt> but it instead of extracting the value or throwing the exception, <tt>wait()</tt> returns a new Future with the result of the input Future. Like <tt>get()</tt>, <tt>wait()</tt> can also take a timeout—see <a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14677">Timeouts</a>.</li>
-<li><tt>getVia()</tt> and <tt>waitVia()</tt>, which are like <tt>get()</tt> and <tt>wait()</tt> except that they drive some Executor (say, an <tt>EventBase</tt>) until the Future is complete. See <a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14606">Testing</a> for more.</li>
+<li>用<tt>Future&lt;T&gt;::wait()</tt>阻塞等待future. 这和<tt>get()</tt>很相似，但是它不会提取值或者抛出异常，而是返回包含输入future结果的新future。<tt>wait()</tt> 也接收一个timeout—见<a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14677">Timeouts</a>.</li>
+<li><tt>getVia()</tt> 和 <tt>waitVia()</tt>, 与<tt>get()</tt> 、 <tt>wait()</tt>类似，除了它们驱动一些 Executor (比如, 一个<tt>EventBase</tt>) 直到Future完成. 更多详见<a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14606">Testing</a>.</li>
 </ul>
 
 
-<div class="remarkup-note"><span class="remarkup-note-word">NOTE:</span> <tt>makeFuture()</tt>, <tt>get()</tt>, <tt>wait()</tt>, and friends are especially handy in tests and are documented further in the <a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14606">Testing</a> article.</div>
+<div class="remarkup-note"><span class="remarkup-note-word">NOTE:</span> <tt>makeFuture()</tt>, <tt>get()</tt>, <tt>wait()</tt>族函数很方便测试，更详细的文档在 <a href="https://our.intern.facebook.com/intern/dex/document/?doc_id=14606">Testing</a> 一文.</div>
 
-<h2 id="overloads-of-then">Overloads of then() <a href="#overloads-of-then" class="headerLink">#</a></h2>
+<h2 id="overloads-of-then">then() 的重载<a href="#overloads-of-then" class="headerLink">#</a></h2>
 
 <p>Above are demonstrations of variants of <tt>then()</tt> whose callbacks</p>
 
