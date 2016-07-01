@@ -115,28 +115,7 @@ bert.h:13: note: bert::shared_ptr<T>::shared_ptr(T*) [with T = Base]
          it += n; // 随机迭代器，O(1)复杂度
    }
 ```
-受到标准库的启发，继续完善智能指针：
-```c++
- struct static_cast_tag
- {     };      
 
-   // for cast
-       template <typename U>
-       shared_ptr(const shared_ptr<U>& ptr, static_cast_tag ) : ptr_(static_cast<T* >(ptr.ptr_)) {
-         count_ = ptr.count_;
-         ++ *count_;
-    }   
-
-// external  function 
-   template <typename U, typename T>
-shared_ptr<U>  static_pointer_cast(const shared_ptr<T>&  ptr)   {                   
-    return shared_ptr<U>(ptr, static_cast_tag());
-}
-// 现在这样就合法了：
- bert::shared_ptr<Base> pb(new Derived);
- bert::shared_ptr<Derived> pd(bert::static_pointer_cast<Derived>(pb));
-```
-待续。。。怎么全文下划线了啊？
 <!-- markdown end -->
 </div>
 <div class="entry" id="main">
