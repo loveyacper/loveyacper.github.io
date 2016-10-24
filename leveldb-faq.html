@@ -92,11 +92,13 @@ seq = 4， key = "city" , value  = "shenzhen"
 获取的仍然是shanghai，而不是现在的shenzhen。
 那么如何保证snapshot所引用的文件集不被删除呢？
 leveldb的compact线程是唯一可能删除文件或产生文件的地方，查看DoCompactionWork函数：
+```c++
 if (snapshots_.empty()) {
     compact->smallest_snapshot = versions_->LastSequence();
   } else {
     compact->smallest_snapshot = snapshots_.oldest()->number_;
   }
+```
 后续处理保证了只有seq全部小于smallest_snapshot的文件才会被删除，否则就保留。
 
 
@@ -173,13 +175,16 @@ seq = 4， key = "city" , value  = "shenzhen"
 此时Get("city", snapshot),(实际代码snapshot在ReadOption)
 获取的仍然是shanghai，而不是现在的shenzhen。
 那么如何保证snapshot所引用的文件集不被删除呢？
-leveldb的compact线程是唯一可能删除文件或产生文件的地方，查看DoCompactionWork函数：
-if (snapshots<em>.empty()) {
-    compact-&gt;smallest</em>snapshot = versions<em>-&gt;LastSequence();
+leveldb的compact线程是唯一可能删除文件或产生文件的地方，查看DoCompactionWork函数：</p>
+
+<pre><code class="c++">if (snapshots_.empty()) {
+    compact-&gt;smallest_snapshot = versions_-&gt;LastSequence();
   } else {
-    compact-&gt;smallest</em>snapshot = snapshots<em>.oldest()-&gt;number</em>;
+    compact-&gt;smallest_snapshot = snapshots_.oldest()-&gt;number_;
   }
-后续处理保证了只有seq全部小于smallest_snapshot的文件才会被删除，否则就保留。</p>
+</code></pre>
+
+<p>后续处理保证了只有seq全部小于smallest_snapshot的文件才会被删除，否则就保留。</p>
 <!-- content end -->
 </div>
 <br>
