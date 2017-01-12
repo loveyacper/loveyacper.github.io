@@ -29,6 +29,21 @@
    在[上篇](smart_ptr.html)的结尾，我们写出一个toy的初级shared_ptr。智能指针不仅仅自动回收资源，而且要和裸指针表现一致，本文将致力于完善它，最终将会呈现给大家一个可以完全替代裸指针的智能指针类。
 
 
+##类型转换
+   假如有一个Base类和继承自它的一个子类Derived，那么存在从Derived指针到Base指针的隐式转换：
+```c++
+   Derived*  pd = new Derived;
+   Base* pb = pd; //  隐式转换
+};
+```
+   
+我们写出类似的智能指针版本：
+```c++
+    bert::shared_ptr<Derived> pd(new Derived);
+    bert::shared_ptr<Base>     pb(pd); // compile error
+```
+
+然后编译，啊噢，好像出了点问题，gcc开始抱怨：
 
 <!-- markdown end -->
 </div>
@@ -37,6 +52,23 @@
 <h2 id="">第一版的不足</h2>
 
 <p>在<a href="smart_ptr.html">上篇</a>的结尾，我们写出一个toy的初级shared_ptr。智能指针不仅仅自动回收资源，而且要和裸指针表现一致，本文将致力于完善它，最终将会呈现给大家一个可以完全替代裸指针的智能指针类。</p>
+
+<h2 id="">类型转换</h2>
+
+<p>假如有一个Base类和继承自它的一个子类Derived，那么存在从Derived指针到Base指针的隐式转换：</p>
+
+<pre><code class="c++">   Derived*  pd = new Derived;
+   Base* pb = pd; //  隐式转换
+};
+</code></pre>
+
+<p>我们写出类似的智能指针版本：</p>
+
+<pre><code class="c++">    bert::shared_ptr&lt;Derived&gt; pd(new Derived);
+    bert::shared_ptr&lt;Base&gt;     pb(pd); // compile error
+</code></pre>
+
+<p>然后编译，啊噢，好像出了点问题，gcc开始抱怨：</p>
 <!-- content end -->
 </div>
 <br>
