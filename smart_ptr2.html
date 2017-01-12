@@ -45,6 +45,30 @@
 
 然后编译，啊噢，好像出了点问题，gcc开始抱怨：
 
+```c++
+test.cc:13: error: no matching function for call to ‘bert::shared_ptr<Base>::shared_ptr
+
+(bert::shared_ptr<Derived>&)’
+
+bert.h:27: note: candidates are: bert::shared_ptr<T>::shared_ptr(const bert::shared_ptr<T>&) [with T = Base]
+
+bert.h:13: note: bert::shared_ptr<T>::shared_ptr(T*) [with T = Base]
+```
+给出的错误信息很明确，缺少相应的构造函数；只要你的C++基础及格了，应该很清楚智能指针需要加入一个模板拷贝构造函数：
+
+
+```c++
+   template <typename U>
+   friend class shared_ptr;
+   // shared_ptr<T>和shared_ptr<U>是完全不同的两个类
+
+   template<class U>
+   shared_ptr(const shared_ptr<U>& ptr) : ptr_(ptr.ptr_)   {
+       count_ = ptr.count_;
+       ++ *count_;
+   }
+```
+
 <!-- markdown end -->
 </div>
 <div class="entry" id="main">
@@ -69,6 +93,28 @@
 </code></pre>
 
 <p>然后编译，啊噢，好像出了点问题，gcc开始抱怨：</p>
+
+<pre><code class="c++">test.cc:13: error: no matching function for call to ‘bert::shared_ptr&lt;Base&gt;::shared_ptr
+
+(bert::shared_ptr&lt;Derived&gt;&amp;)’
+
+bert.h:27: note: candidates are: bert::shared_ptr&lt;T&gt;::shared_ptr(const bert::shared_ptr&lt;T&gt;&amp;) [with T = Base]
+
+bert.h:13: note: bert::shared_ptr&lt;T&gt;::shared_ptr(T*) [with T = Base]
+</code></pre>
+
+<p>给出的错误信息很明确，缺少相应的构造函数；只要你的C++基础及格了，应该很清楚智能指针需要加入一个模板拷贝构造函数：</p>
+
+<pre><code class="c++">   template &lt;typename U&gt;
+   friend class shared_ptr;
+   // shared_ptr&lt;T&gt;和shared_ptr&lt;U&gt;是完全不同的两个类
+
+   template&lt;class U&gt;
+   shared_ptr(const shared_ptr&lt;U&gt;&amp; ptr) : ptr_(ptr.ptr_)   {
+       count_ = ptr.count_;
+       ++ *count_;
+   }
+</code></pre>
 <!-- content end -->
 </div>
 <br>
