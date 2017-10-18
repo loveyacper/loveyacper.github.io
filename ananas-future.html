@@ -25,28 +25,27 @@
 	</div>
 <div id="md" style="display: none;">
 <!-- markdown -->
-
-     ananas是一个C++11编写的基础库，包括了后台开发常用的一些功能：udp&tcp, epoll&kqueue的网络库封装，python-style的协程，易用的timer，多线程logger，threadPool，tls，unittest，google-protobuf-rpc，以及强大的future / promise。 
-
+##ananas Future
+ananas是一个C++11编写的基础库，包括了后台开发常用的一些功能：udp & tcp, epoll & kqueue的网络库封装，python-style的协程，易用的timer，多线程logger，threadPool，tls，unittest，google-protobuf-rpc，以及强大的future-promise。 
 
 ###1.ananas来由
 
-        接触C++11也有2-3年了，个人在两个月前决定对后台常用代码做一个整理，开始编写[ananas](https://github.com/loveyacper/ananas)。也非常巧合，大约10天后也就是2016.12月中旬，我和几位同事合作开发一款简易的moba小游戏，使用帧同步，服务器只需要维护简单的房间逻辑和连接管理，做好分帧消息用timer下发即可。鉴于是快速demo开发，客户端不打算接公司组件，因此服务器也不使用tsf4g。只花了半个下午就利用ananas+protobuf与客户端初步通信成功，并在年前顺利的向leader们完成了游戏展示，我也决定继续开发维护ananas。本文先介绍一下ananas future的使用。
+接触C++11也有2-3年了，个人在两个月前决定对后台常用代码做一个整理，开始编写[ananas](https://github.com/loveyacper/ananas)。也非常巧合，大约10天后也就是2016.12月中旬，我和几位同事合作开发一款简易的moba小游戏，使用帧同步，服务器只需要维护简单的房间逻辑和连接管理，做好分帧消息用timer下发即可。鉴于是快速demo开发，客户端不打算接公司组件，因此服务器也不使用tsf4g。只花了半个下午就利用ananas+protobuf与客户端初步通信成功，并在年前顺利的向leader们完成了游戏展示，我也决定继续开发维护ananas。本文先介绍一下ananas future的使用。
 
 ###2.Future简介
 
-        在使用C++11之后，大家应该发现标准库已经实现了promise / future。但是，稍稍了解后就会发现，这份代码像是为了完成KPI而加入的，其鸡肋的程度不亚于当年的std::auto_ptr。是的，你只能对future轮询或者阻塞等待，在关注性能的代码中是无法使用的。因此Herb Sutter等人提出了新的future提案：点我打开C++ future提案ananas future实现了该提案的所有功能，甚至更多（when-N, 以及非常重要的timeout支持）。另外底层基础设施主要借鉴folly future，它帮我解决了C++模板的各种晦涩难用的语法问题。在下一篇源码实现篇再详解。有关Folly future简介可以看这篇文章：facebook folly future库介绍
+在使用C++11之后，大家应该发现标准库已经实现了promise / future。但是，稍稍了解后就会发现，这份代码像是为了完成KPI而加入的，其鸡肋的程度不亚于当年的std::auto_ptr。是的，你只能对future轮询或者阻塞等待，在关注性能的代码中是无法使用的。因此Herb Sutter等人提出了新的future提案：点我打开C++ future提案ananas future实现了该提案的所有功能，甚至更多（when-N, 以及非常重要的timeout支持）。另外底层基础设施主要借鉴folly future，它帮我解决了C++模板的各种晦涩难用的语法问题。在下一篇源码实现篇再详解。有关Folly future简介可以看这篇文章：facebook folly future库介绍
 
-      下面就几种场景展示一下使用ananas future的解决方案。
+下面就几种场景展示一下使用ananas future的解决方案。
 
 ###3.使用场景
 
 ####3.1 按顺序向多个服务器发起请求：链式调用
 
-       服务器需要向redis1拉取玩家基础信息，获得基础信息后，又根据其内容，再向redis2请求获取详细信息。在老式C代码中，使用callback我们一般需要保存上下文，而C++11可以利用shared_ptr和lambda模拟闭包以捕获上下文：
+服务器需要向redis1拉取玩家基础信息，获得基础信息后，又根据其内容，再向redis2请求获取详细信息。在老式C代码中，使用callback我们一般需要保存上下文，而C++11可以利用shared_ptr和lambda模拟闭包以捕获上下文：
 
-//1. 异步获取基础信息
 ```cpp
+//1. 异步获取基础信息
 redis_conn1->Get<BasicProfile>("basic_profile_key")
 .Then([redis_conn2](const BasicProfile& data) {
     //2. 处理返回的基础信息，异步获取详细信息                           
@@ -56,7 +55,6 @@ redis_conn1->Get<BasicProfile>("basic_profile_key")
 })
 .Then([client_conn](const DetailProfile& data) {
     //3. SUCC 处理返回的详细信息,返回给客户端
-
     client_conn->SendPacket(data);
 })
 .OnTimeout(std::chrono::seconds(3), [client_conn]() {
@@ -66,10 +64,11 @@ redis_conn1->Get<BasicProfile>("basic_profile_key")
 }, &this_event_loop);
 ```
 
-       第一个Get发起请求，并立即返回，使用Then注册callback处理结果，第一个请求返回后，发起第二个Get请求，当第二个请求返回后，再发送给客户端。其中OnTimeout是处理请求超时的情况，如果3s内任意redis没有返回响应，this_event_loop超时回调，向客户端通知。
+ 第一个Get发起请求，并立即返回，使用Then注册callback处理结果，第一个请求返回后，发起第二个Get请求，当第二个请求返回后，再发送给客户端。其中OnTimeout是处理请求超时的情况，如果3s内任意redis没有返回响应，this_event_loop超时回调，向客户端通知。
+
 ####3.2 同时向多个服务器发起请求，当所有请求返回后，开始处理
 
-      仍然沿用上面的例子，条件改为基础信息和详细信息没有关联，可以同时请求，并都发送给客户端：
+仍然沿用上面的例子，条件改为基础信息和详细信息没有关联，可以同时请求，并都发送给客户端：
 
 ```cpp
 //1. 异步获取基础信息和详细信息
@@ -143,7 +142,7 @@ ananas::WhenAll(fut1, fut2)
 
 ####3.4.同时向多个服务器发起请求，当其中过半请求返回后，开始处理
 
-     典型场景是paxos。在第一阶段，proposer尝试发起预提案prepare；当得到多数派acceptors的承诺回包，才可以发起第二阶段，请求提议一个值给acceptors：   
+典型场景是paxos。在第一阶段，proposer尝试发起预提案prepare；当得到多数派acceptors的承诺回包，才可以发起第二阶段，请求提议一个值给acceptors：   
 
 ```cpp
 // paxos phase1: Proposer发送prepare给Acceptors
@@ -177,9 +176,9 @@ WhenN(kMajority, std::begin(futures), std::end(futures))
 
 ####3.5  指定Then回调在特定线程执行
 
-    在Herb Sutter的提案中，提到了关于指派Then回调函数在特定线程执行的能力。对此，我捏造了这样的一个例子：
+在Herb Sutter的提案中，提到了关于指派Then回调函数在特定线程执行的能力。对此，我捏造了这样的一个例子：
 
-     假如服务器需要读一个很大的文件，文件是没有非阻塞读的(先不考虑io_sumbit )，read可能需要数百毫秒的时间。如果采取同步读取，势必造成服务器阻塞。我们希望另外开一个IO线程读取，当IO线程读取完成通知我们。
+假如服务器需要读一个很大的文件，文件是没有非阻塞读的(先不考虑io_sumbit )，read可能需要数百毫秒的时间。如果采取同步读取，势必造成服务器阻塞。我们希望另外开一个IO线程读取，当IO线程读取完成通知我们。
 使用future编写代码如下：
 
 ```cpp
@@ -198,7 +197,7 @@ ft.Then([conn](const Buffer& file_contents) {
 &this_loop);
 ```
 
-     这样的代码是否存在问题？请注意，对于一个tcp连接，send一般来说都不允许多线程调用。callback中的这行语句
+这样的代码是否存在问题？请注意，对于一个tcp连接，send一般来说都不允许多线程调用。callback中的这行语句
 ```cpp
 conn->SendPacket(file_content); 
 ```
@@ -215,11 +214,11 @@ ft.Then(&this_loop, [conn](const Buffer& file_contents) { ...
 
 ###4.示例:基于future的redis客户端
 
-    前面简单介绍了future使用的各种场景，现在以一个完整的例子结束本文：redis客户端。之所以选择实现redis客户端，一是因为redis应用广泛，大家对它很熟悉；二是redis协议简单，且能保证协议应答的有序性，实现起来难度不大，不至于使大家分散注意力。
+前面简单介绍了future使用的各种场景，现在以一个完整的例子结束本文：redis客户端。之所以选择实现redis客户端，一是因为redis应用广泛，大家对它很熟悉；二是redis协议简单，且能保证协议应答的有序性，实现起来难度不大，不至于使大家分散注意力。
 
 ####  4.1协议的发送
 
-    对于协议打包，我选择了采用inline协议。利用C++11的变长模板参数可以非常容易做到： 
+对于协议打包，我选择了采用inline协议。利用C++11的变长模板参数可以非常容易做到： 
 ```cpp
 // Build redis request from multiple strings, use inline protocol 
 template <typename... Args>
@@ -241,7 +240,7 @@ std::string BuildRedisRequest(H&& head, T&&... tails)
 
 #### 4.2 协议的发送与上下文维护
 
-      redis支持pipeline请求，也就是不必要一应一答。因此我们需要为发送出去的请求保存一个上下文。由于请求和应答是严格有序对应的，一定程度上简化了我们的实现。当发出一个请求，需要为此构造一个Promise，这里简单说一下Promise：promise和future是一一对应的，可以理解为生产者操作promise，为其填充value，而消费者操作future，为其注册回调函数，在获得value时这些回调被执行）。这样api可以返回其对应的future，使用者就可以享用fluent的future接口：
+redis支持pipeline请求，也就是不必要一应一答。因此我们需要为发送出去的请求保存一个上下文。由于请求和应答是严格有序对应的，一定程度上简化了我们的实现。当发出一个请求，需要为此构造一个Promise，这里简单说一下Promise：promise和future是一一对应的，可以理解为生产者操作promise，为其填充value，而消费者操作future，为其注册回调函数，在获得value时这些回调被执行）。这样api可以返回其对应的future，使用者就可以享用fluent的future接口：
 
 ```cpp
    // set name first, then get name.
@@ -300,7 +299,7 @@ RedisContext::Get(const std::string& key)
 
 #### 4.3 处理响应
 
-    当解析到完整的redis服务器回包，从pending队列中取出头部的promise，设置值即可：
+当解析到完整的redis服务器回包，从pending队列中取出头部的promise，设置值即可：
 
 ```cpp
 auto& req = pending_.front();
@@ -334,37 +333,34 @@ void WaitMultiRequests(const std::shared_ptr<RedisContext>& ctx)
 
 5.结语
 
-    关于ananas future的使用篇就到这里，后面会带来future的源码分析以及其它模块的使用和实现。
+关于ananas future的使用篇就到这里，后面会带来future的源码分析以及其它模块的使用和实现。
 
 <!-- markdown end -->
 </div>
 <div class="entry" id="main">
 <!-- content -->
-<pre><code> ananas是一个C++11编写的基础库，包括了后台开发常用的一些功能：udp&amp;tcp, epoll&amp;kqueue的网络库封装，python-style的协程，易用的timer，多线程logger，threadPool，tls，unittest，google-protobuf-rpc，以及强大的future / promise。 
-</code></pre>
+<h2 id="ananasfuture">ananas Future</h2>
+
+<p>ananas是一个C++11编写的基础库，包括了后台开发常用的一些功能：udp &amp; tcp, epoll &amp; kqueue的网络库封装，python-style的协程，易用的timer，多线程logger，threadPool，tls，unittest，google-protobuf-rpc，以及强大的future-promise。 </p>
 
 <h3 id="1ananas">1.ananas来由</h3>
 
-<pre><code>    接触C++11也有2-3年了，个人在两个月前决定对后台常用代码做一个整理，开始编写[ananas](https://github.com/loveyacper/ananas)。也非常巧合，大约10天后也就是2016.12月中旬，我和几位同事合作开发一款简易的moba小游戏，使用帧同步，服务器只需要维护简单的房间逻辑和连接管理，做好分帧消息用timer下发即可。鉴于是快速demo开发，客户端不打算接公司组件，因此服务器也不使用tsf4g。只花了半个下午就利用ananas+protobuf与客户端初步通信成功，并在年前顺利的向leader们完成了游戏展示，我也决定继续开发维护ananas。本文先介绍一下ananas future的使用。
-</code></pre>
+<p>接触C++11也有2-3年了，个人在两个月前决定对后台常用代码做一个整理，开始编写<a href="https://github.com/loveyacper/ananas">ananas</a>。也非常巧合，大约10天后也就是2016.12月中旬，我和几位同事合作开发一款简易的moba小游戏，使用帧同步，服务器只需要维护简单的房间逻辑和连接管理，做好分帧消息用timer下发即可。鉴于是快速demo开发，客户端不打算接公司组件，因此服务器也不使用tsf4g。只花了半个下午就利用ananas+protobuf与客户端初步通信成功，并在年前顺利的向leader们完成了游戏展示，我也决定继续开发维护ananas。本文先介绍一下ananas future的使用。</p>
 
 <h3 id="2future">2.Future简介</h3>
 
-<pre><code>    在使用C++11之后，大家应该发现标准库已经实现了promise / future。但是，稍稍了解后就会发现，这份代码像是为了完成KPI而加入的，其鸡肋的程度不亚于当年的std::auto_ptr。是的，你只能对future轮询或者阻塞等待，在关注性能的代码中是无法使用的。因此Herb Sutter等人提出了新的future提案：点我打开C++ future提案ananas future实现了该提案的所有功能，甚至更多（when-N, 以及非常重要的timeout支持）。另外底层基础设施主要借鉴folly future，它帮我解决了C++模板的各种晦涩难用的语法问题。在下一篇源码实现篇再详解。有关Folly future简介可以看这篇文章：facebook folly future库介绍
+<p>在使用C++11之后，大家应该发现标准库已经实现了promise / future。但是，稍稍了解后就会发现，这份代码像是为了完成KPI而加入的，其鸡肋的程度不亚于当年的std::auto_ptr。是的，你只能对future轮询或者阻塞等待，在关注性能的代码中是无法使用的。因此Herb Sutter等人提出了新的future提案：点我打开C++ future提案ananas future实现了该提案的所有功能，甚至更多（when-N, 以及非常重要的timeout支持）。另外底层基础设施主要借鉴folly future，它帮我解决了C++模板的各种晦涩难用的语法问题。在下一篇源码实现篇再详解。有关Folly future简介可以看这篇文章：facebook folly future库介绍</p>
 
-  下面就几种场景展示一下使用ananas future的解决方案。
-</code></pre>
+<p>下面就几种场景展示一下使用ananas future的解决方案。</p>
 
 <h3 id="3">3.使用场景</h3>
 
 <h4 id="31">3.1 按顺序向多个服务器发起请求：链式调用</h4>
 
-<pre><code>   服务器需要向redis1拉取玩家基础信息，获得基础信息后，又根据其内容，再向redis2请求获取详细信息。在老式C代码中，使用callback我们一般需要保存上下文，而C++11可以利用shared_ptr和lambda模拟闭包以捕获上下文：
-</code></pre>
+<p>服务器需要向redis1拉取玩家基础信息，获得基础信息后，又根据其内容，再向redis2请求获取详细信息。在老式C代码中，使用callback我们一般需要保存上下文，而C++11可以利用shared_ptr和lambda模拟闭包以捕获上下文：</p>
 
-<p>//1. 异步获取基础信息</p>
-
-<pre><code class="cpp">redis_conn1-&gt;Get&lt;BasicProfile&gt;("basic_profile_key")
+<pre><code class="cpp">//1. 异步获取基础信息
+redis_conn1-&gt;Get&lt;BasicProfile&gt;("basic_profile_key")
 .Then([redis_conn2](const BasicProfile&amp; data) {
     //2. 处理返回的基础信息，异步获取详细信息                           
     return redis_conn2-&gt;Get&lt;DetailProfile&gt;("detail_profile_key"); 
@@ -373,7 +369,6 @@ void WaitMultiRequests(const std::shared_ptr<RedisContext>& ctx)
 })
 .Then([client_conn](const DetailProfile&amp; data) {
     //3. SUCC 处理返回的详细信息,返回给客户端
-
     client_conn-&gt;SendPacket(data);
 })
 .OnTimeout(std::chrono::seconds(3), [client_conn]() {
@@ -383,13 +378,11 @@ void WaitMultiRequests(const std::shared_ptr<RedisContext>& ctx)
 }, &amp;this_event_loop);
 </code></pre>
 
-<pre><code>   第一个Get发起请求，并立即返回，使用Then注册callback处理结果，第一个请求返回后，发起第二个Get请求，当第二个请求返回后，再发送给客户端。其中OnTimeout是处理请求超时的情况，如果3s内任意redis没有返回响应，this_event_loop超时回调，向客户端通知。
-</code></pre>
+<p>第一个Get发起请求，并立即返回，使用Then注册callback处理结果，第一个请求返回后，发起第二个Get请求，当第二个请求返回后，再发送给客户端。其中OnTimeout是处理请求超时的情况，如果3s内任意redis没有返回响应，this<em>event</em>loop超时回调，向客户端通知。</p>
 
 <h4 id="32">3.2 同时向多个服务器发起请求，当所有请求返回后，开始处理</h4>
 
-<pre><code>  仍然沿用上面的例子，条件改为基础信息和详细信息没有关联，可以同时请求，并都发送给客户端：
-</code></pre>
+<p>仍然沿用上面的例子，条件改为基础信息和详细信息没有关联，可以同时请求，并都发送给客户端：</p>
 
 <pre><code class="cpp">//1. 异步获取基础信息和详细信息
 auto fut1 = redis_conn1-&gt;Get&lt;BasicProfile&gt;("basic_profile_key");
@@ -460,8 +453,7 @@ ananas::WhenAll(fut1, fut2)
 
 <h4 id="34">3.4.同时向多个服务器发起请求，当其中过半请求返回后，开始处理</h4>
 
-<pre><code> 典型场景是paxos。在第一阶段，proposer尝试发起预提案prepare；当得到多数派acceptors的承诺回包，才可以发起第二阶段，请求提议一个值给acceptors：   
-</code></pre>
+<p>典型场景是paxos。在第一阶段，proposer尝试发起预提案prepare；当得到多数派acceptors的承诺回包，才可以发起第二阶段，请求提议一个值给acceptors：   </p>
 
 <pre><code class="cpp">// paxos phase1: Proposer发送prepare给Acceptors
 const paxos::Prepare prepare;
@@ -494,12 +486,10 @@ WhenN(kMajority, std::begin(futures), std::end(futures))
 
 <h4 id="35then">3.5  指定Then回调在特定线程执行</h4>
 
-<pre><code>在Herb Sutter的提案中，提到了关于指派Then回调函数在特定线程执行的能力。对此，我捏造了这样的一个例子：
+<p>在Herb Sutter的提案中，提到了关于指派Then回调函数在特定线程执行的能力。对此，我捏造了这样的一个例子：</p>
 
- 假如服务器需要读一个很大的文件，文件是没有非阻塞读的(先不考虑io_sumbit )，read可能需要数百毫秒的时间。如果采取同步读取，势必造成服务器阻塞。我们希望另外开一个IO线程读取，当IO线程读取完成通知我们。
-</code></pre>
-
-<p>使用future编写代码如下：</p>
+<p>假如服务器需要读一个很大的文件，文件是没有非阻塞读的(先不考虑io_sumbit )，read可能需要数百毫秒的时间。如果采取同步读取，势必造成服务器阻塞。我们希望另外开一个IO线程读取，当IO线程读取完成通知我们。
+使用future编写代码如下：</p>
 
 <pre><code class="cpp">// In this_loop thread.
 // 在另外一个线程读取very_big_file
@@ -516,8 +506,7 @@ ft.Then([conn](const Buffer&amp; file_contents) {
 &amp;this_loop);
 </code></pre>
 
-<pre><code> 这样的代码是否存在问题？请注意，对于一个tcp连接，send一般来说都不允许多线程调用。callback中的这行语句
-</code></pre>
+<p>这样的代码是否存在问题？请注意，对于一个tcp连接，send一般来说都不允许多线程调用。callback中的这行语句</p>
 
 <pre><code class="cpp">conn-&gt;SendPacket(file_content); 
 </code></pre>
@@ -533,13 +522,11 @@ ft.Then([conn](const Buffer&amp; file_contents) {
 
 <h3 id="4futureredis">4.示例:基于future的redis客户端</h3>
 
-<pre><code>前面简单介绍了future使用的各种场景，现在以一个完整的例子结束本文：redis客户端。之所以选择实现redis客户端，一是因为redis应用广泛，大家对它很熟悉；二是redis协议简单，且能保证协议应答的有序性，实现起来难度不大，不至于使大家分散注意力。
-</code></pre>
+<p>前面简单介绍了future使用的各种场景，现在以一个完整的例子结束本文：redis客户端。之所以选择实现redis客户端，一是因为redis应用广泛，大家对它很熟悉；二是redis协议简单，且能保证协议应答的有序性，实现起来难度不大，不至于使大家分散注意力。</p>
 
 <h4 id="41">4.1协议的发送</h4>
 
-<pre><code>对于协议打包，我选择了采用inline协议。利用C++11的变长模板参数可以非常容易做到： 
-</code></pre>
+<p>对于协议打包，我选择了采用inline协议。利用C++11的变长模板参数可以非常容易做到： </p>
 
 <pre><code class="cpp">// Build redis request from multiple strings, use inline protocol 
 template &lt;typename... Args&gt;
@@ -561,8 +548,7 @@ std::string BuildRedisRequest(H&amp;&amp; head, T&amp;&amp;... tails)
 
 <h4 id="42">4.2 协议的发送与上下文维护</h4>
 
-<pre><code>  redis支持pipeline请求，也就是不必要一应一答。因此我们需要为发送出去的请求保存一个上下文。由于请求和应答是严格有序对应的，一定程度上简化了我们的实现。当发出一个请求，需要为此构造一个Promise，这里简单说一下Promise：promise和future是一一对应的，可以理解为生产者操作promise，为其填充value，而消费者操作future，为其注册回调函数，在获得value时这些回调被执行）。这样api可以返回其对应的future，使用者就可以享用fluent的future接口：
-</code></pre>
+<p>redis支持pipeline请求，也就是不必要一应一答。因此我们需要为发送出去的请求保存一个上下文。由于请求和应答是严格有序对应的，一定程度上简化了我们的实现。当发出一个请求，需要为此构造一个Promise，这里简单说一下Promise：promise和future是一一对应的，可以理解为生产者操作promise，为其填充value，而消费者操作future，为其注册回调函数，在获得value时这些回调被执行）。这样api可以返回其对应的future，使用者就可以享用fluent的future接口：</p>
 
 <pre><code class="cpp">   // set name first, then get name.
     ctx-&gt;Set("name", "bertyoung").Then(
@@ -618,8 +604,7 @@ RedisContext::Get(const std::string&amp; key)
 
 <h4 id="43">4.3 处理响应</h4>
 
-<pre><code>当解析到完整的redis服务器回包，从pending队列中取出头部的promise，设置值即可：
-</code></pre>
+<p>当解析到完整的redis服务器回包，从pending队列中取出头部的promise，设置值即可：</p>
 
 <pre><code class="cpp">auto&amp; req = pending_.front();
 // 设置promise       
@@ -650,8 +635,7 @@ pending_.pop();
 
 <p>5.结语</p>
 
-<pre><code>关于ananas future的使用篇就到这里，后面会带来future的源码分析以及其它模块的使用和实现。
-</code></pre>
+<p>关于ananas future的使用篇就到这里，后面会带来future的源码分析以及其它模块的使用和实现。</p>
 <!-- content end -->
 </div>
 <br>
