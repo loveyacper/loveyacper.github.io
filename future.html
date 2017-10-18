@@ -1,0 +1,701 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="Keywords" content="blog"/>
+    <meta name="Description" content="blog"/>
+    <title>Simple</title>
+    <link rel="shortcut icon" href="/static/favicon.png"/>
+    <link rel="stylesheet" type="text/css" href="/main.css" />
+</head>
+<body>
+<div class="main">
+    <div class="header">
+    	<ul id="pages">
+            <li><a href="/">home</a></li>
+            <li><a href="/#/tags">tags</a></li>
+            <li><a href="/#/archive">archive</a></li>
+    	</ul>
+    </div>
+	<div class="wrap-header">
+	<h1>
+    <a href="/" id="title"></a>
+	</h1>
+	</div>
+<div id="md" style="display: none;">
+<!-- markdown -->
+###1.ananas来由
+
+接触C++11也有2-3年了，个人在两个月前决定对后台常用代码做一个整理，开始编写[ananas](https://github.com/loveyacper/ananas)。也非常巧合，大约10天后也就是2016.12月中旬，我和几位同事合作开发一款简易的moba小游戏，使用帧同步，服务器只需要维护简单的房间逻辑和连接管理，做好分帧消息用timer下发即可。鉴于是快速demo开发，客户端不打算接公司组件，因此服务器也不使用tsf4g。只花了半个下午就利用ananas+protobuf与客户端初步通信成功，并在年前顺利的向leader们完成了游戏展示，我也决定继续开发维护ananas。本文先介绍一下ananas future的使用。
+###2.Future简介
+
+在使用C++11之后，大家应该发现标准库已经实现了promise / future。但是，稍稍了解后就会发现，这份代码像是为了完成KPI而加入的，其鸡肋的程度不亚于当年的std::auto_ptr。是的，你只能对future轮询或者阻塞等待，在关注性能的代码中是无法使用的。因此Herb Sutter等人提出了新的future提案：点我打开C++ future提案ananas future实现了该提案的所有功能，甚至更多（when-N, 以及非常重要的timeout支持）。另外底层基础设施主要借鉴folly future，它帮我解决了C++模板的各种晦涩难用的语法问题。在下一篇源码实现篇再详解。有关Folly future简介可以看这篇文章：facebook folly future库介绍
+
+下面就几种场景展示一下使用ananas future的解决方案。
+
+###3.使用场景
+
+####3.1 按顺序向多个服务器发起请求：链式调用
+
+服务器需要向redis1拉取玩家基础信息，获得基础信息后，又根据其内容，再向redis2请求获取详细信息。在老式C代码中，使用callback我们一般需要保存上下文，而C++11可以利用shared_ptr和lambda模拟闭包以捕获上下文：
+
+```cpp
+//1. 异步获取基础信息
+redis_conn1->Get<BasicProfile>("basic_profile_key")
+.Then([redis_conn2](const BasicProfile& data) {
+    //2. 处理返回的基础信息，异步获取详细信息                           
+    return redis_conn2->Get<DetailProfile>("detail_profile_key"); 
+
+    // it return another future
+})
+.Then([client_conn](const DetailProfile& data) {
+    //3. SUCC 处理返回的详细信息,返回给客户端
+    client_conn->SendPacket(data);
+})
+.OnTimeout(std::chrono::seconds(3), [client_conn]() {
+    std::cout << "请求超时了\n";
+    //3. FAIL 返回给客户端
+    client_conn->SendPacket("server timeout error");
+}, &this_event_loop);
+```
+
+ 第一个Get发起请求，并立即返回，使用Then注册callback处理结果，第一个请求返回后，发起第二个Get请求，当第二个请求返回后，再发送给客户端。其中OnTimeout是处理请求超时的情况，如果3s内任意redis没有返回响应，this_event_loop超时回调，向客户端通知。
+
+####3.2 同时向多个服务器发起请求，当所有请求返回后，开始处理
+
+仍然沿用上面的例子，条件改为基础信息和详细信息没有关联，可以同时请求，并都发送给客户端：
+
+```cpp
+//1. 异步获取基础信息和详细信息
+auto fut1 = redis_conn1->Get<BasicProfile>("basic_profile_key");
+auto fut2 = redis_conn2->Get<DetailProfile>("detail_profile_key");
+ananas::WhenAll(fut1, fut2)
+.Then([client_conn](std::tuple<BasicProfile, DetailProfile>& results) {
+    //2. SUCC 返回给客户端
+    client_conn->SendPacket(std::get<0>(results));
+    client_conn->SendPacket(std::get<1>(results));
+})
+.OnTimeout(std::chrono::seconds(3), [client_conn]() {
+    std::cout << "请求超时了\n";
+    //3. FAIL 返回给客户端
+    client_conn->SendPacket("server timeout error");
+}, &this_event_loop);
+```
+ WhenAll将所有future的结果收集起来，只有收集完毕，才会执行回调。
+
+
+####3.3 同时向多个服务器发起请求，当某一个请求返回后，开始处理
+
+假如有3个同样的服务器S1，S2，S3，我们想发起100次请求测试，看哪个服务器响应最快。这是使用WhenAny的场景：
+```cpp
+    struct Statics
+    {
+        std::atomic<int> completes{0};
+        std::vector<int>  firsts;
+
+        explicit Statics(int n) : 
+            firsts(n)
+        { } 
+    };  
+
+    auto stat = std::make_shared<Statics>(3); // 统计每个服务器获得第一的次数 (响应最快)
+
+    const int kTests = 100;
+    for (int i = 0; i < kTests; ++ i)
+    {   
+        std::vector<Future<std::string> > futures;
+        for (int i = 0; i < 3; ++ i)
+        {   
+            auto fut = conn[i]->Get<std::string>("ping");
+            futures.emplace_back(std::move(fut));
+        }   
+            
+        auto anyFut = futures.WhenAny(std::begin(futures), std::end(futures));
+        anyFut.Then([stat](std::pair<size_t/* fut index*/, std::string>& result) {
+            size_t index = result.first;
+            // 本次，index这个服务器的响应最快
+            stat->firsts[index] ++; 
+            if (stat->completes.fetch_add(1) == kTests - 1) {
+                // 100次测试完成 
+                int quickest = 0;
+                for (int i = 1; i < 3; ++ i)
+                {   
+                    if (stat->firsts[i] > stat->firsts[quickest])
+                        quickest = i;
+                }   
+                printf("The fast server index is %d\n", quickest);
+            }   
+        });
+    }
+```
+ 
+
+ 当3个请求中有任意一个返回（亦即最快的那个服务器），回调函数执行，统计次数。
+
+最终，次数最多的那个服务器基本就是响应最快的。
+
+
+####3.4.同时向多个服务器发起请求，当其中过半请求返回后，开始处理
+
+典型场景是paxos。在第一阶段，proposer尝试发起预提案prepare；当得到多数派acceptors的承诺回包，才可以发起第二阶段，请求提议一个值给acceptors：   
+
+```cpp
+// paxos phase1: Proposer发送prepare给Acceptors
+const paxos::Prepare prepare;
+std::vector<Future<paxos::Promise> > futures;
+for (const auto& acceptor : acceptors_)
+{
+    auto fut = acceptor.SendPrepare(prepare);
+    futures.emplace_back(std::move(fut));
+}
+
+const int kMajority = static_cast<int>(futures.size() / 2) + 1;
+
+// 这里用匿名future即可
+WhenN(kMajority, std::begin(futures), std::end(futures))
+
+.Then([](std::vector<paxos::Promise>& results) {
+    printf("提议成功，收到了多数派acceptors的承诺，现在发起第二阶段propose!\n");
+    // paxos phase2: 选择一个值：SelectValue
+    const auto value = SelectValue(hint_value);
+    // 向acceptors发起提案:
+    // foreach (a in acceptors)
+    //   a->SendAccept(ctx_id, value); // 使用ctx-id,保证两阶段使用的是同一个提议id号码
+})
+.OnTimeout(std::chrono::seconds(3), []() {
+    printf("prepare超时,也许是失败,请增大提议号重试发起!\n");
+    //increase prepareId and  continue send prepare
+},
+&this_eventloop);
+```
+
+####3.5  指定Then回调在特定线程执行
+
+在Herb Sutter的提案中，提到了关于指派Then回调函数在特定线程执行的能力。对此，我捏造了这样的一个例子：
+
+假如服务器需要读一个很大的文件，文件是没有非阻塞读的(先不考虑io_sumbit )，read可能需要数百毫秒的时间。如果采取同步读取，势必造成服务器阻塞。我们希望另外开一个IO线程读取，当IO线程读取完成通知我们。
+使用future编写代码如下：
+
+```cpp
+// In this_loop thread.
+// 在另外一个线程读取very_big_file
+Future<Buffer> ft(ReadFileInSeparateThread(very_big_file));
+ft.Then([conn](const Buffer& file_contents) {
+    // SUCCESS : process file_content; 
+    conn->SendPacket(file_content);
+})
+.OnTimeout(std::chrono::seconds(3), [=very_big_file]() {
+    // FAILED OR TIMEOUT: 
+
+    printf("Read file %s failed\n", very_big_file); 
+},
+&this_loop);
+```
+
+这样的代码是否存在问题？请注意，对于一个tcp连接，send一般来说都不允许多线程调用。callback中的这行语句
+```cpp
+conn->SendPacket(file_content); 
+```
+ 
+
+是在读文件线程中执行的，因此有多线程调用send的危险。
+
+所以我们需要指定该callback在原来的线程执行，很简单，只需要改动一行，调用另外一个Then的重载：
+```cpp
+ft.Then(&this_loop, [conn](const Buffer& file_contents) { ...
+```
+ 注意第一个参数this_loop,这样，SendPacket就将在本线程运行，不存在并发错误了。
+
+
+###4.示例:基于future的redis客户端
+
+前面简单介绍了future使用的各种场景，现在以一个完整的例子结束本文：redis客户端。之所以选择实现redis客户端，一是因为redis应用广泛，大家对它很熟悉；二是redis协议简单，且能保证协议应答的有序性，实现起来难度不大，不至于使大家分散注意力。
+
+####  4.1协议的发送
+
+对于协议打包，我选择了采用inline协议。利用C++11的变长模板参数可以非常容易做到： 
+```cpp
+// Build redis request from multiple strings, use inline protocol 
+template <typename... Args>
+std::string BuildRedisRequest(Args&& ...);
+
+template <typename S>
+std::string BuildRedisRequest(S&& s)
+{
+    return std::string(std::forward<S>(s)) + "\r\n";
+}
+
+template <typename H, typename... T>
+std::string BuildRedisRequest(H&& head, T&&... tails)
+{
+    std::string h(std::forward<H>(head));
+    return h + " " + BuildRedisRequest(std::forward<T>(tails)...);
+}
+```
+
+#### 4.2 协议的发送与上下文维护
+
+redis支持pipeline请求，也就是不必要一应一答。因此我们需要为发送出去的请求保存一个上下文。由于请求和应答是严格有序对应的，一定程度上简化了我们的实现。当发出一个请求，需要为此构造一个Promise，这里简单说一下Promise：promise和future是一一对应的，可以理解为生产者操作promise，为其填充value，而消费者操作future，为其注册回调函数，在获得value时这些回调被执行）。这样api可以返回其对应的future，使用者就可以享用fluent的future接口：
+
+```cpp
+   // set name first, then get name.
+    ctx->Set("name", "bertyoung").Then(
+            [ctx](const ResponseInfo& rsp) {
+                RedisContext::PrintResponse(rsp);
+                return ctx->Get("name"); // get name, return another future
+            }).Then(
+                RedisContext::PrintResponse
+            );
+```
+ 现在定义挂起的请求上下文：
+
+```cpp
+enum ResponseType
+{
+    None,
+    Fine, // redis返回OK
+    Error, // 返回错误
+    String, // redis返回字符串
+};
+
+
+using ResponseInfo = std::pair<ResponseType, std::string>;
+
+struct Request
+{
+       std::vector<std::string> request;
+       ananas::Promise<ResponseInfo> promise;
+}
+
+std::queue<Request> pending_;
+```
+
+
+ 每次请求，创建一个Request对象，并加入到pending_队列，queue的先进先出特性和redis协议的有序性配合非常完美：
+
+```cpp
+ananas::Future<ResponseInfo>
+RedisContext::Get(const std::string& key)
+{
+    // Redis inline protocol request
+    std::string req_buf = BuildRedisRequest("get", key);
+    hostConn_->SendPacket(req_buf.data(), req_buf.size());
+
+    RedisContext::Request req;
+    req.request.push_back("get");
+    req.request.push_back(key);
+
+    auto fut = req.promise.GetFuture();
+    pending_.push(std::move(req));
+
+    return fut;
+}
+```
+
+#### 4.3 处理响应
+
+当解析到完整的redis服务器回包，从pending队列中取出头部的promise，设置值即可：
+
+```cpp
+auto& req = pending_.front();
+// 设置promise       
+req.promise.SetValue(ResponseInfo(type_, content_));
+// 弹出已收到响应的请求
+pending_.pop();
+```
+
+#### 4.4调用示例
+
+发起两个请求，当请求都返回后，打印：
+```cpp
+void WaitMultiRequests(const std::shared_ptr<RedisContext>& ctx)
+{
+    // issue 2 requests, when they all return, callback
+    auto fut1 = ctx->Set("city", "shenzhen");
+    auto fut2 = ctx->Set("company", "tencent");
+
+    ananas::WhenAll(fut1, fut2).Then(
+                    [](std::tuple<ananas::Try<ResponseInfo>,
+                                  ananas::Try<ResponseInfo> >& results) {
+                        std::cout << "All requests returned:\n";
+                        RedisContext::PrintResponse(std::get<0>(results));
+                        RedisContext::PrintResponse(std::get<1>(results));
+            }); 
+}
+```
+ 
+
+
+5.结语
+
+关于ananas future的使用篇就到这里，后面会带来future的源码分析以及其它模块的使用和实现。
+
+<!-- markdown end -->
+</div>
+<div class="entry" id="main">
+<!-- content -->
+<h3 id="1ananas">1.ananas来由</h3>
+
+<p>接触C++11也有2-3年了，个人在两个月前决定对后台常用代码做一个整理，开始编写<a href="https://github.com/loveyacper/ananas">ananas</a>。也非常巧合，大约10天后也就是2016.12月中旬，我和几位同事合作开发一款简易的moba小游戏，使用帧同步，服务器只需要维护简单的房间逻辑和连接管理，做好分帧消息用timer下发即可。鉴于是快速demo开发，客户端不打算接公司组件，因此服务器也不使用tsf4g。只花了半个下午就利用ananas+protobuf与客户端初步通信成功，并在年前顺利的向leader们完成了游戏展示，我也决定继续开发维护ananas。本文先介绍一下ananas future的使用。</p>
+
+<h3 id="2future">2.Future简介</h3>
+
+<p>在使用C++11之后，大家应该发现标准库已经实现了promise / future。但是，稍稍了解后就会发现，这份代码像是为了完成KPI而加入的，其鸡肋的程度不亚于当年的std::auto_ptr。是的，你只能对future轮询或者阻塞等待，在关注性能的代码中是无法使用的。因此Herb Sutter等人提出了新的future提案：点我打开C++ future提案ananas future实现了该提案的所有功能，甚至更多（when-N, 以及非常重要的timeout支持）。另外底层基础设施主要借鉴folly future，它帮我解决了C++模板的各种晦涩难用的语法问题。在下一篇源码实现篇再详解。有关Folly future简介可以看这篇文章：facebook folly future库介绍</p>
+
+<p>下面就几种场景展示一下使用ananas future的解决方案。</p>
+
+<h3 id="3">3.使用场景</h3>
+
+<h4 id="31">3.1 按顺序向多个服务器发起请求：链式调用</h4>
+
+<p>服务器需要向redis1拉取玩家基础信息，获得基础信息后，又根据其内容，再向redis2请求获取详细信息。在老式C代码中，使用callback我们一般需要保存上下文，而C++11可以利用shared_ptr和lambda模拟闭包以捕获上下文：</p>
+
+<pre><code class="cpp">//1. 异步获取基础信息
+redis_conn1-&gt;Get&lt;BasicProfile&gt;("basic_profile_key")
+.Then([redis_conn2](const BasicProfile&amp; data) {
+    //2. 处理返回的基础信息，异步获取详细信息                           
+    return redis_conn2-&gt;Get&lt;DetailProfile&gt;("detail_profile_key"); 
+
+    // it return another future
+})
+.Then([client_conn](const DetailProfile&amp; data) {
+    //3. SUCC 处理返回的详细信息,返回给客户端
+    client_conn-&gt;SendPacket(data);
+})
+.OnTimeout(std::chrono::seconds(3), [client_conn]() {
+    std::cout &lt;&lt; "请求超时了\n";
+    //3. FAIL 返回给客户端
+    client_conn-&gt;SendPacket("server timeout error");
+}, &amp;this_event_loop);
+</code></pre>
+
+<p>第一个Get发起请求，并立即返回，使用Then注册callback处理结果，第一个请求返回后，发起第二个Get请求，当第二个请求返回后，再发送给客户端。其中OnTimeout是处理请求超时的情况，如果3s内任意redis没有返回响应，this<em>event</em>loop超时回调，向客户端通知。</p>
+
+<h4 id="32">3.2 同时向多个服务器发起请求，当所有请求返回后，开始处理</h4>
+
+<p>仍然沿用上面的例子，条件改为基础信息和详细信息没有关联，可以同时请求，并都发送给客户端：</p>
+
+<pre><code class="cpp">//1. 异步获取基础信息和详细信息
+auto fut1 = redis_conn1-&gt;Get&lt;BasicProfile&gt;("basic_profile_key");
+auto fut2 = redis_conn2-&gt;Get&lt;DetailProfile&gt;("detail_profile_key");
+ananas::WhenAll(fut1, fut2)
+.Then([client_conn](std::tuple&lt;BasicProfile, DetailProfile&gt;&amp; results) {
+    //2. SUCC 返回给客户端
+    client_conn-&gt;SendPacket(std::get&lt;0&gt;(results));
+    client_conn-&gt;SendPacket(std::get&lt;1&gt;(results));
+})
+.OnTimeout(std::chrono::seconds(3), [client_conn]() {
+    std::cout &lt;&lt; "请求超时了\n";
+    //3. FAIL 返回给客户端
+    client_conn-&gt;SendPacket("server timeout error");
+}, &amp;this_event_loop);
+</code></pre>
+
+<p>WhenAll将所有future的结果收集起来，只有收集完毕，才会执行回调。</p>
+
+<h4 id="33">3.3 同时向多个服务器发起请求，当某一个请求返回后，开始处理</h4>
+
+<p>假如有3个同样的服务器S1，S2，S3，我们想发起100次请求测试，看哪个服务器响应最快。这是使用WhenAny的场景：</p>
+
+<pre><code class="cpp">    struct Statics
+    {
+        std::atomic&lt;int&gt; completes{0};
+        std::vector&lt;int&gt;  firsts;
+
+        explicit Statics(int n) : 
+            firsts(n)
+        { } 
+    };  
+
+    auto stat = std::make_shared&lt;Statics&gt;(3); // 统计每个服务器获得第一的次数 (响应最快)
+
+    const int kTests = 100;
+    for (int i = 0; i &lt; kTests; ++ i)
+    {   
+        std::vector&lt;Future&lt;std::string&gt; &gt; futures;
+        for (int i = 0; i &lt; 3; ++ i)
+        {   
+            auto fut = conn[i]-&gt;Get&lt;std::string&gt;("ping");
+            futures.emplace_back(std::move(fut));
+        }   
+
+        auto anyFut = futures.WhenAny(std::begin(futures), std::end(futures));
+        anyFut.Then([stat](std::pair&lt;size_t/* fut index*/, std::string&gt;&amp; result) {
+            size_t index = result.first;
+            // 本次，index这个服务器的响应最快
+            stat-&gt;firsts[index] ++; 
+            if (stat-&gt;completes.fetch_add(1) == kTests - 1) {
+                // 100次测试完成 
+                int quickest = 0;
+                for (int i = 1; i &lt; 3; ++ i)
+                {   
+                    if (stat-&gt;firsts[i] &gt; stat-&gt;firsts[quickest])
+                        quickest = i;
+                }   
+                printf("The fast server index is %d\n", quickest);
+            }   
+        });
+    }
+</code></pre>
+
+<p>当3个请求中有任意一个返回（亦即最快的那个服务器），回调函数执行，统计次数。</p>
+
+<p>最终，次数最多的那个服务器基本就是响应最快的。</p>
+
+<h4 id="34">3.4.同时向多个服务器发起请求，当其中过半请求返回后，开始处理</h4>
+
+<p>典型场景是paxos。在第一阶段，proposer尝试发起预提案prepare；当得到多数派acceptors的承诺回包，才可以发起第二阶段，请求提议一个值给acceptors：   </p>
+
+<pre><code class="cpp">// paxos phase1: Proposer发送prepare给Acceptors
+const paxos::Prepare prepare;
+std::vector&lt;Future&lt;paxos::Promise&gt; &gt; futures;
+for (const auto&amp; acceptor : acceptors_)
+{
+    auto fut = acceptor.SendPrepare(prepare);
+    futures.emplace_back(std::move(fut));
+}
+
+const int kMajority = static_cast&lt;int&gt;(futures.size() / 2) + 1;
+
+// 这里用匿名future即可
+WhenN(kMajority, std::begin(futures), std::end(futures))
+
+.Then([](std::vector&lt;paxos::Promise&gt;&amp; results) {
+    printf("提议成功，收到了多数派acceptors的承诺，现在发起第二阶段propose!\n");
+    // paxos phase2: 选择一个值：SelectValue
+    const auto value = SelectValue(hint_value);
+    // 向acceptors发起提案:
+    // foreach (a in acceptors)
+    //   a-&gt;SendAccept(ctx_id, value); // 使用ctx-id,保证两阶段使用的是同一个提议id号码
+})
+.OnTimeout(std::chrono::seconds(3), []() {
+    printf("prepare超时,也许是失败,请增大提议号重试发起!\n");
+    //increase prepareId and  continue send prepare
+},
+&amp;this_eventloop);
+</code></pre>
+
+<h4 id="35then">3.5  指定Then回调在特定线程执行</h4>
+
+<p>在Herb Sutter的提案中，提到了关于指派Then回调函数在特定线程执行的能力。对此，我捏造了这样的一个例子：</p>
+
+<p>假如服务器需要读一个很大的文件，文件是没有非阻塞读的(先不考虑io_sumbit )，read可能需要数百毫秒的时间。如果采取同步读取，势必造成服务器阻塞。我们希望另外开一个IO线程读取，当IO线程读取完成通知我们。
+使用future编写代码如下：</p>
+
+<pre><code class="cpp">// In this_loop thread.
+// 在另外一个线程读取very_big_file
+Future&lt;Buffer&gt; ft(ReadFileInSeparateThread(very_big_file));
+ft.Then([conn](const Buffer&amp; file_contents) {
+    // SUCCESS : process file_content; 
+    conn-&gt;SendPacket(file_content);
+})
+.OnTimeout(std::chrono::seconds(3), [=very_big_file]() {
+    // FAILED OR TIMEOUT: 
+
+    printf("Read file %s failed\n", very_big_file); 
+},
+&amp;this_loop);
+</code></pre>
+
+<p>这样的代码是否存在问题？请注意，对于一个tcp连接，send一般来说都不允许多线程调用。callback中的这行语句</p>
+
+<pre><code class="cpp">conn-&gt;SendPacket(file_content); 
+</code></pre>
+
+<p>是在读文件线程中执行的，因此有多线程调用send的危险。</p>
+
+<p>所以我们需要指定该callback在原来的线程执行，很简单，只需要改动一行，调用另外一个Then的重载：</p>
+
+<pre><code class="cpp">ft.Then(&amp;this_loop, [conn](const Buffer&amp; file_contents) { ...
+</code></pre>
+
+<p>注意第一个参数this_loop,这样，SendPacket就将在本线程运行，不存在并发错误了。</p>
+
+<h3 id="4futureredis">4.示例:基于future的redis客户端</h3>
+
+<p>前面简单介绍了future使用的各种场景，现在以一个完整的例子结束本文：redis客户端。之所以选择实现redis客户端，一是因为redis应用广泛，大家对它很熟悉；二是redis协议简单，且能保证协议应答的有序性，实现起来难度不大，不至于使大家分散注意力。</p>
+
+<h4 id="41">4.1协议的发送</h4>
+
+<p>对于协议打包，我选择了采用inline协议。利用C++11的变长模板参数可以非常容易做到： </p>
+
+<pre><code class="cpp">// Build redis request from multiple strings, use inline protocol 
+template &lt;typename... Args&gt;
+std::string BuildRedisRequest(Args&amp;&amp; ...);
+
+template &lt;typename S&gt;
+std::string BuildRedisRequest(S&amp;&amp; s)
+{
+    return std::string(std::forward&lt;S&gt;(s)) + "\r\n";
+}
+
+template &lt;typename H, typename... T&gt;
+std::string BuildRedisRequest(H&amp;&amp; head, T&amp;&amp;... tails)
+{
+    std::string h(std::forward&lt;H&gt;(head));
+    return h + " " + BuildRedisRequest(std::forward&lt;T&gt;(tails)...);
+}
+</code></pre>
+
+<h4 id="42">4.2 协议的发送与上下文维护</h4>
+
+<p>redis支持pipeline请求，也就是不必要一应一答。因此我们需要为发送出去的请求保存一个上下文。由于请求和应答是严格有序对应的，一定程度上简化了我们的实现。当发出一个请求，需要为此构造一个Promise，这里简单说一下Promise：promise和future是一一对应的，可以理解为生产者操作promise，为其填充value，而消费者操作future，为其注册回调函数，在获得value时这些回调被执行）。这样api可以返回其对应的future，使用者就可以享用fluent的future接口：</p>
+
+<pre><code class="cpp">   // set name first, then get name.
+    ctx-&gt;Set("name", "bertyoung").Then(
+            [ctx](const ResponseInfo&amp; rsp) {
+                RedisContext::PrintResponse(rsp);
+                return ctx-&gt;Get("name"); // get name, return another future
+            }).Then(
+                RedisContext::PrintResponse
+            );
+</code></pre>
+
+<p>现在定义挂起的请求上下文：</p>
+
+<pre><code class="cpp">enum ResponseType
+{
+    None,
+    Fine, // redis返回OK
+    Error, // 返回错误
+    String, // redis返回字符串
+};
+
+
+using ResponseInfo = std::pair&lt;ResponseType, std::string&gt;;
+
+struct Request
+{
+       std::vector&lt;std::string&gt; request;
+       ananas::Promise&lt;ResponseInfo&gt; promise;
+}
+
+std::queue&lt;Request&gt; pending_;
+</code></pre>
+
+<p>每次请求，创建一个Request对象，并加入到pending_队列，queue的先进先出特性和redis协议的有序性配合非常完美：</p>
+
+<pre><code class="cpp">ananas::Future&lt;ResponseInfo&gt;
+RedisContext::Get(const std::string&amp; key)
+{
+    // Redis inline protocol request
+    std::string req_buf = BuildRedisRequest("get", key);
+    hostConn_-&gt;SendPacket(req_buf.data(), req_buf.size());
+
+    RedisContext::Request req;
+    req.request.push_back("get");
+    req.request.push_back(key);
+
+    auto fut = req.promise.GetFuture();
+    pending_.push(std::move(req));
+
+    return fut;
+}
+</code></pre>
+
+<h4 id="43">4.3 处理响应</h4>
+
+<p>当解析到完整的redis服务器回包，从pending队列中取出头部的promise，设置值即可：</p>
+
+<pre><code class="cpp">auto&amp; req = pending_.front();
+// 设置promise       
+req.promise.SetValue(ResponseInfo(type_, content_));
+// 弹出已收到响应的请求
+pending_.pop();
+</code></pre>
+
+<h4 id="44">4.4调用示例</h4>
+
+<p>发起两个请求，当请求都返回后，打印：</p>
+
+<pre><code class="cpp">void WaitMultiRequests(const std::shared_ptr&lt;RedisContext&gt;&amp; ctx)
+{
+    // issue 2 requests, when they all return, callback
+    auto fut1 = ctx-&gt;Set("city", "shenzhen");
+    auto fut2 = ctx-&gt;Set("company", "tencent");
+
+    ananas::WhenAll(fut1, fut2).Then(
+                    [](std::tuple&lt;ananas::Try&lt;ResponseInfo&gt;,
+                                  ananas::Try&lt;ResponseInfo&gt; &gt;&amp; results) {
+                        std::cout &lt;&lt; "All requests returned:\n";
+                        RedisContext::PrintResponse(std::get&lt;0&gt;(results));
+                        RedisContext::PrintResponse(std::get&lt;1&gt;(results));
+            }); 
+}
+</code></pre>
+
+<p>5.结语</p>
+
+<p>关于ananas future的使用篇就到这里，后面会带来future的源码分析以及其它模块的使用和实现。</p>
+<!-- content end -->
+</div>
+<br>
+<br>
+    <div id="disqus_thread"></div>
+	<div class="footer">
+		<p>© Copyright 2014 by isnowfy, Designed by isnowfy</p>
+	</div>
+</div>
+<script src="main.js"></script>
+<script id="content" type="text/mustache">
+    <h1>{{title}}</h1>
+    <div class="tag">
+    {{date}}
+    {{#tags}}
+    <a href="/#/tag/{{name}}">#{{name}}</a>
+    {{/tags}}
+    </div>
+</script>
+<script id="pagesTemplate" type="text/mustache">
+    {{#pages}}
+    <li>
+        <a href="{{path}}">{{title}}</a>
+    </li>
+    {{/pages}}
+</script>
+<script>
+$(document).ready(function() {
+    $.ajax({
+        url: "main.json",
+        type: "GET",
+        dataType: "json",
+        success: function(data) {
+            $("#title").html(data.name);
+            var pagesTemplate = Hogan.compile($("#pagesTemplate").html());
+            var pagesHtml = pagesTemplate.render({"pages": data.pages});
+            $("#pages").append(pagesHtml);
+            //path
+            var path = "future.html";
+            //path end
+            var now = 0;
+            for (var i = 0; i < data.posts.length; ++i)
+                if (path == data.posts[i].path)
+                    now = i;
+            var post = data.posts[now];
+            var tmp = post.tags.split(" ");
+            var tags = [];
+            for (var i = 0; i < tmp.length; ++i)
+                if (tmp[i].length > 0)
+                    tags.push({"name": tmp[i]});
+            var contentTemplate = Hogan.compile($("#content").html());
+            var contentHtml = contentTemplate.render({"title": post.title, "tags": tags, "date": post.date});
+            $("#main").prepend(contentHtml);
+            if (data.disqus_shortname.length > 0) {
+                var disqus_shortname = data.disqus_shortname;
+                (function() {
+                    var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+                    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+                    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+                })();
+            }
+        }
+    });
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ["\\(", "\\)"]], processEscapes: true}});
+</script>
+</body>
+</html>
