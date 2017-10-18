@@ -26,8 +26,7 @@
 <div id="md" style="display: none;">
 <!-- markdown -->
 ##ananas Future
-ananas是一个C++11编写的基础库，包括了后台开发常用的一些功能：udp & tcp, epoll & kqueue的网络库封装，python-style的协程，易用的timer，多线程logger，threadPool，tls，unittest，google-protobuf-rpc，以及强大的future-promise。 
-
+ananas是一个C++11编写的基础库，包括了后台开发常用的一些功能：udp-tcp, epoll-kqueue的网络库封装，python-style的协程，易用的timer，多线程logger，threadPool，tls，unittest，google-protobuf-rpc，以及强大的future-promise。
 ###1.ananas来由
 
 接触C++11也有2-3年了，个人在两个月前决定对后台常用代码做一个整理，开始编写[ananas](https://github.com/loveyacper/ananas)。也非常巧合，大约10天后也就是2016.12月中旬，我和几位同事合作开发一款简易的moba小游戏，使用帧同步，服务器只需要维护简单的房间逻辑和连接管理，做好分帧消息用timer下发即可。鉴于是快速demo开发，客户端不打算接公司组件，因此服务器也不使用tsf4g。只花了半个下午就利用ananas+protobuf与客户端初步通信成功，并在年前顺利的向leader们完成了游戏展示，我也决定继续开发维护ananas。本文先介绍一下ananas future的使用。
@@ -341,7 +340,7 @@ void WaitMultiRequests(const std::shared_ptr<RedisContext>& ctx)
 <!-- content -->
 <h2 id="ananasfuture">ananas Future</h2>
 
-<p>ananas是一个C++11编写的基础库，包括了后台开发常用的一些功能：udp &amp; tcp, epoll &amp; kqueue的网络库封装，python-style的协程，易用的timer，多线程logger，threadPool，tls，unittest，google-protobuf-rpc，以及强大的future-promise。 </p>
+<p>ananas是一个C++11编写的基础库，包括了后台开发常用的一些功能：udp-tcp, epoll-kqueue的网络库封装，python-style的协程，易用的timer，多线程logger，threadPool，tls，unittest，google-protobuf-rpc，以及强大的future-promise。</p>
 
 <h3 id="1ananas">1.ananas来由</h3>
 
