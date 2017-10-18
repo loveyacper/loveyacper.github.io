@@ -223,10 +223,10 @@ ft.Then(&this_loop, [conn](const Buffer& file_contents) { ...
 template <typename... Args>
 std::string BuildRedisRequest(Args&& ...);
 
-template <typename S>
-std::string BuildRedisRequest(S&& s)
+template <typename STR>
+std::string BuildRedisRequest(STR&& s)
 {
-    return std::string(std::forward<S>(s)) + "\r\n";
+    return std::string(std::forward<STR>(s)) + "\r\n";
 }
 
 template <typename H, typename... T>
@@ -531,10 +531,10 @@ ft.Then([conn](const Buffer&amp; file_contents) {
 template &lt;typename... Args&gt;
 std::string BuildRedisRequest(Args&amp;&amp; ...);
 
-template &lt;typename S&gt;
-std::string BuildRedisRequest(S&amp;&amp; s)
+template &lt;typename STR&gt;
+std::string BuildRedisRequest(STR&amp;&amp; s)
 {
-    return std::string(std::forward&lt;S&gt;(s)) + "\r\n";
+    return std::string(std::forward&lt;STR&gt;(s)) + "\r\n";
 }
 
 template &lt;typename H, typename... T&gt;
