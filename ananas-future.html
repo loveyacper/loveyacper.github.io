@@ -210,6 +210,31 @@ ft.Then(&this_loop, [conn](const Buffer& file_contents) { ...
 ```
  注意第一个参数this_loop,这样，SendPacket就将在本线程运行，不存在并发错误了。
 
+###4.示例:基于future的redis客户端
+
+前面简单介绍了future使用的各种场景，现在以一个完整的例子结束本文：redis客户端。之所以选择实现redis客户端，一是因为redis应用广泛，大家对它很熟悉；二是redis协议简单，且能保证协议应答的有序性，实现起来难度不大，不至于使大家分散注意力。
+
+####  4.1协议的发送
+
+对于协议打包，我选择了采用inline协议。利用C++11的变长模板参数可以非常容易做到： 
+```cpp
+// Build redis request from multiple strings, use inline protocol 
+template <typename... Args>
+std::string BuildRedisRequest(Args&& ...);
+
+template <typename STR>
+std::string BuildRedisRequest(STR&& s)
+{
+    return std::string(std::forward<STR>(s)) + "\r\n";
+}
+
+template <typename HEAD, typename... TAIL>
+std::string BuildRedisRequest(HEAD&& head, TAIL&&... tails)
+{
+    std::string h(std::forward<HEAD>(head));
+    return h + " " + BuildRedisRequest(std::forward<TAIL>(tails)...);
+}
+```
 <!-- markdown end -->
 </div>
 <div class="entry" id="main">
@@ -394,6 +419,32 @@ ft.Then([conn](const Buffer&amp; file_contents) {
 </code></pre>
 
 <p>注意第一个参数this_loop,这样，SendPacket就将在本线程运行，不存在并发错误了。</p>
+
+<h3 id="4futureredis">4.示例:基于future的redis客户端</h3>
+
+<p>前面简单介绍了future使用的各种场景，现在以一个完整的例子结束本文：redis客户端。之所以选择实现redis客户端，一是因为redis应用广泛，大家对它很熟悉；二是redis协议简单，且能保证协议应答的有序性，实现起来难度不大，不至于使大家分散注意力。</p>
+
+<h4 id="41">4.1协议的发送</h4>
+
+<p>对于协议打包，我选择了采用inline协议。利用C++11的变长模板参数可以非常容易做到： </p>
+
+<pre><code class="cpp">// Build redis request from multiple strings, use inline protocol 
+template &lt;typename... Args&gt;
+std::string BuildRedisRequest(Args&amp;&amp; ...);
+
+template &lt;typename STR&gt;
+std::string BuildRedisRequest(STR&amp;&amp; s)
+{
+    return std::string(std::forward&lt;STR&gt;(s)) + "\r\n";
+}
+
+template &lt;typename HEAD, typename... TAIL&gt;
+std::string BuildRedisRequest(HEAD&amp;&amp; head, TAIL&amp;&amp;... tails)
+{
+    std::string h(std::forward&lt;HEAD&gt;(head));
+    return h + " " + BuildRedisRequest(std::forward&lt;TAIL&gt;(tails)...);
+}
+</code></pre>
 <!-- content end -->
 </div>
 <br>
