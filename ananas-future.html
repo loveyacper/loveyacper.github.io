@@ -308,6 +308,34 @@ req.promise.SetValue(ResponseInfo(type_, content_));
 pending_.pop();
 ```
 
+
+#### 4.4调用示例
+
+发起两个请求，当请求都返回后，打印：
+```cpp
+void WaitMultiRequests(const std::shared_ptr<RedisContext>& ctx)
+{
+    // issue 2 requests, when they all return, callback
+    auto fut1 = ctx->Set("city", "shenzhen");
+    auto fut2 = ctx->Set("company", "tencent");
+
+    ananas::WhenAll(fut1, fut2).Then(
+                    [](std::tuple<ananas::Try<ResponseInfo>,
+                                  ananas::Try<ResponseInfo> >& results) {
+                        std::cout << "All requests returned:\n";
+                        RedisContext::PrintResponse(std::get<0>(results));
+                        RedisContext::PrintResponse(std::get<1>(results));
+            }); 
+}
+```
+ 
+
+
+5.结语
+
+关于ananas future的使用篇就到这里，后面会带来future的源码分析以及其它模块的使用和实现。
+
+
 <!-- markdown end -->
 </div>
 <div class="entry" id="main">
@@ -585,6 +613,30 @@ req.promise.SetValue(ResponseInfo(type_, content_));
 // 弹出已收到响应的请求
 pending_.pop();
 </code></pre>
+
+<h4 id="44">4.4调用示例</h4>
+
+<p>发起两个请求，当请求都返回后，打印：</p>
+
+<pre><code class="cpp">void WaitMultiRequests(const std::shared_ptr&lt;RedisContext&gt;&amp; ctx)
+{
+    // issue 2 requests, when they all return, callback
+    auto fut1 = ctx-&gt;Set("city", "shenzhen");
+    auto fut2 = ctx-&gt;Set("company", "tencent");
+
+    ananas::WhenAll(fut1, fut2).Then(
+                    [](std::tuple&lt;ananas::Try&lt;ResponseInfo&gt;,
+                                  ananas::Try&lt;ResponseInfo&gt; &gt;&amp; results) {
+                        std::cout &lt;&lt; "All requests returned:\n";
+                        RedisContext::PrintResponse(std::get&lt;0&gt;(results));
+                        RedisContext::PrintResponse(std::get&lt;1&gt;(results));
+            }); 
+}
+</code></pre>
+
+<p>5.结语</p>
+
+<p>关于ananas future的使用篇就到这里，后面会带来future的源码分析以及其它模块的使用和实现。</p>
 <!-- content end -->
 </div>
 <br>
