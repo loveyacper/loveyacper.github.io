@@ -1,0 +1,241 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="Keywords" content="blog"/>
+    <meta name="Description" content="blog"/>
+    <title>Simple</title>
+    <link rel="shortcut icon" href="/static/favicon.png"/>
+    <link rel="stylesheet" type="text/css" href="/main.css" />
+</head>
+<body>
+<div class="main">
+    <div class="header">
+    	<ul id="pages">
+            <li><a href="/">home</a></li>
+            <li><a href="/#/tags">tags</a></li>
+            <li><a href="/#/archive">archive</a></li>
+    	</ul>
+    </div>
+	<div class="wrap-header">
+	<h1>
+    <a href="/" id="title"></a>
+	</h1>
+	</div>
+<div id="md" style="display: none;">
+<!-- markdown -->
+一本精炼的电子书，不到200页，可以作为函数式编程入门读物。
+
+[!image](https://img1.doubanio.com/lpic/s28271089.jpg)
+
+
+本书主要采用java8，groovy，scala，clojure讲述函数式思维。
+
+##CH2
+一个例子：
+我们有一个字符串列表，其中有些字符串只有单个字符；现在，请将这种字符串去掉，并将剩下的字符串首字母大写，用逗号拼接起来。
+
+书中使用java8之前的版本展示了命令式编程的方式，代码非常冗余：需要显式的for循环遍历以及if判断，在最后拼接字符串时，还需要手动去除尾部的逗号。代码不再展示，这里贴一下使用C++11编写的函数式解决方案，全程使用STL算法。除了最后的打印，在处理过程中，没有使用for和if关键字：
+
+```cpp
+// 简略排版，省去std
+using namespace std;
+
+// 数据
+list<string> names{ "neal", "s", "stu", "j", "rich", "bob", "aiden", "j", "ethan",
+                    "liam", "mason", "noah", "lucas", "jacob", "jayden", "jack"};
+
+//1. filter single char
+names.remove_if([](const string& s) { return s.size() <= 1; }); 
+
+//2. captilize
+std::for_each(std::begin(names), std::end(names),
+              [](string& str) {
+                  str[0] = toupper(str[0]);
+              }); 
+
+//3. reduce: join ','
+
+string result = std::accumulate(std::begin(names),
+                                std::end(names),
+                                string(), /* init */
+                                [](const string& a, const string& b) {
+                                    if (a.empty())
+                                        return b;
+                                    else
+                                        return a + "," + b;
+                                }); 
+
+//4. print
+cout << result << endl;
+```
+
+尽管STL算法对函数式编程提供了支持，仍然有点冗余。
+让我们看看书中给出的scala核心实现：
+```scala
+“val result = employees
+     .filter(_.length() > 1)
+     .map(_.capitalize)
+     .reduce(_ + "," + _)”
+```
+只需要一行scala代码，完美fluent风格的实现。对于这个例子，Java8也几乎达到了scala的水平。相比之下，C++的函数式编程太过啰嗦臃肿，而且没有reduce的直接支持，accumulate算法需要小心处理第一个元素。
+
+* 三板斧
+ - filter
+
+      筛选是对集合的一种基本操作，根据用户定义的过滤条件，由此产生一个较小的列表。对于函数式语言，生成的小列表是一个新的副本。而C++的remove_if则是就地操作，不具备函数式语言的特点。
+ 
+ - map
+
+      映射对集合每一个元素应用指定的操作，这种修改是就地的，得到新的集合。对应于C++的for_each以及transform。
+
+
+ - reduce
+
+      reduce和fold基本没什么区别，两者都用一个累积量"收集"集合元素。reduce函数一般需要提供一个初始值。而fold一般来说初始值为空。对应于C++，reduce则是accumulate。fold在处理集合元素时可以指定顺序或者反序，对应于函数名字foldLeft和foldRight。
+
+<!-- markdown end -->
+</div>
+<div class="entry" id="main">
+<!-- content -->
+<p>一本精炼的电子书，不到200页，可以作为函数式编程入门读物。</p>
+
+<p><a href="https://img1.doubanio.com/lpic/s28271089.jpg">!image</a></p>
+
+<p>本书主要采用java8，groovy，scala，clojure讲述函数式思维。</p>
+
+<h2 id="ch2">CH2</h2>
+
+<p>一个例子：
+我们有一个字符串列表，其中有些字符串只有单个字符；现在，请将这种字符串去掉，并将剩下的字符串首字母大写，用逗号拼接起来。</p>
+
+<p>书中使用java8之前的版本展示了命令式编程的方式，代码非常冗余：需要显式的for循环遍历以及if判断，在最后拼接字符串时，还需要手动去除尾部的逗号。代码不再展示，这里贴一下使用C++11编写的函数式解决方案，全程使用STL算法。除了最后的打印，在处理过程中，没有使用for和if关键字：</p>
+
+<pre><code class="cpp">// 简略排版，省去std
+using namespace std;
+
+// 数据
+list&lt;string&gt; names{ "neal", "s", "stu", "j", "rich", "bob", "aiden", "j", "ethan",
+                    "liam", "mason", "noah", "lucas", "jacob", "jayden", "jack"};
+
+//1. filter single char
+names.remove_if([](const string&amp; s) { return s.size() &lt;= 1; }); 
+
+//2. captilize
+std::for_each(std::begin(names), std::end(names),
+              [](string&amp; str) {
+                  str[0] = toupper(str[0]);
+              }); 
+
+//3. reduce: join ','
+
+string result = std::accumulate(std::begin(names),
+                                std::end(names),
+                                string(), /* init */
+                                [](const string&amp; a, const string&amp; b) {
+                                    if (a.empty())
+                                        return b;
+                                    else
+                                        return a + "," + b;
+                                }); 
+
+//4. print
+cout &lt;&lt; result &lt;&lt; endl;
+</code></pre>
+
+<p>尽管STL算法对函数式编程提供了支持，仍然有点冗余。
+让我们看看书中给出的scala核心实现：</p>
+
+<pre><code class="scala">“val result = employees
+     .filter(_.length() &gt; 1)
+     .map(_.capitalize)
+     .reduce(_ + "," + _)”
+</code></pre>
+
+<p>只需要一行scala代码，完美fluent风格的实现。对于这个例子，Java8也几乎达到了scala的水平。相比之下，C++的函数式编程太过啰嗦臃肿，而且没有reduce的直接支持，accumulate算法需要小心处理第一个元素。</p>
+
+<ul>
+<li><p>三板斧</p>
+
+<ul><li><p>filter</p>
+
+<p>筛选是对集合的一种基本操作，根据用户定义的过滤条件，由此产生一个较小的列表。对于函数式语言，生成的小列表是一个新的副本。而C++的remove_if则是就地操作，不具备函数式语言的特点。</p></li>
+<li><p>map</p>
+
+<p>映射对集合每一个元素应用指定的操作，这种修改是就地的，得到新的集合。对应于C++的for_each以及transform。</p></li>
+<li><p>reduce</p>
+
+<p>reduce和fold基本没什么区别，两者都用一个累积量"收集"集合元素。reduce函数一般需要提供一个初始值。而fold一般来说初始值为空。对应于C++，reduce则是accumulate。fold在处理集合元素时可以指定顺序或者反序，对应于函数名字foldLeft和foldRight。</p></li></ul></li>
+</ul>
+<!-- content end -->
+</div>
+<br>
+<br>
+    <div id="disqus_thread"></div>
+	<div class="footer">
+		<p>© Copyright 2014 by isnowfy, Designed by isnowfy</p>
+	</div>
+</div>
+<script src="main.js"></script>
+<script id="content" type="text/mustache">
+    <h1>{{title}}</h1>
+    <div class="tag">
+    {{date}}
+    {{#tags}}
+    <a href="/#/tag/{{name}}">#{{name}}</a>
+    {{/tags}}
+    </div>
+</script>
+<script id="pagesTemplate" type="text/mustache">
+    {{#pages}}
+    <li>
+        <a href="{{path}}">{{title}}</a>
+    </li>
+    {{/pages}}
+</script>
+<script>
+$(document).ready(function() {
+    $.ajax({
+        url: "main.json",
+        type: "GET",
+        dataType: "json",
+        success: function(data) {
+            $("#title").html(data.name);
+            var pagesTemplate = Hogan.compile($("#pagesTemplate").html());
+            var pagesHtml = pagesTemplate.render({"pages": data.pages});
+            $("#pages").append(pagesHtml);
+            //path
+            var path = "func.html";
+            //path end
+            var now = 0;
+            for (var i = 0; i < data.posts.length; ++i)
+                if (path == data.posts[i].path)
+                    now = i;
+            var post = data.posts[now];
+            var tmp = post.tags.split(" ");
+            var tags = [];
+            for (var i = 0; i < tmp.length; ++i)
+                if (tmp[i].length > 0)
+                    tags.push({"name": tmp[i]});
+            var contentTemplate = Hogan.compile($("#content").html());
+            var contentHtml = contentTemplate.render({"title": post.title, "tags": tags, "date": post.date});
+            $("#main").prepend(contentHtml);
+            if (data.disqus_shortname.length > 0) {
+                var disqus_shortname = data.disqus_shortname;
+                (function() {
+                    var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+                    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+                    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+                })();
+            }
+        }
+    });
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ["\\(", "\\)"]], processEscapes: true}});
+</script>
+</body>
+</html>
