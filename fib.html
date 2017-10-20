@@ -1,0 +1,220 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="Keywords" content="blog"/>
+    <meta name="Description" content="blog"/>
+    <title>Simple</title>
+    <link rel="shortcut icon" href="/static/favicon.png"/>
+    <link rel="stylesheet" type="text/css" href="/main.css" />
+</head>
+<body>
+<div class="main">
+    <div class="header">
+    	<ul id="pages">
+            <li><a href="/">home</a></li>
+            <li><a href="/#/tags">tags</a></li>
+            <li><a href="/#/archive">archive</a></li>
+    	</ul>
+    </div>
+	<div class="wrap-header">
+	<h1>
+    <a href="/" id="title"></a>
+	</h1>
+	</div>
+<div id="md" style="display: none;">
+<!-- markdown -->
+斐波那契数列是由数学家列昂纳多·斐波那契（Leonardoda Fibonacci）以兔子繁殖为例子而引入的。它的数学定义如下：
+
+-  F0 = 1
+-  F1 = 1,
+-  Fn = Fn-1 + Fn-2
+
+于是很自然的给出一个递归算法：
+
+##递归算法
+
+```cpp
+int fib1(int n)  {
+    if (n < 2)
+        return 1;
+    else
+        return fib1(n - 1) + fib1(n - 2);
+}
+
+```
+   该算法根据数学定义，直接翻译成递归代码，简洁明了。然而，复杂度是指数级，随着n的增大，计算时间指数级增加，以至于稍稍大一点的n现代计算机几乎无法求出。
+
+
+##一个多项式复杂度的算法
+   对于上一个算法，聪明的读者应该看出来了，每次都有重复的计算。比如说已经计算过第n-2项的数列项，在fib1(n - 1)中，又计算了一遍。所以很容易想到采用空间换时间的思想，去除这些重复运算：
+```cpp
+int fib2(int n)  {
+    if (n < 2)
+        return 1;
+
+    std::unique_ptr<int []> arr(new int[n]);
+    arr[0] = arr[1] = 1;
+    for (int i = 2; i < n; ++ i)
+         arr[i] = arr[i - 1] + arr[i - 2];
+
+    return arr[n - 1];
+}
+```
+这里分配了一个临时数组arr缓存已经计算过的数列项，算法复杂度从指数级降到了线性复杂度，现在基本上可以计算任意的数列项了。
+
+##这是最好的算法了吗
+相信绝大多数读者都做到了这一步。然而计算斐波那契数列的最佳算法就止步于此吗？
+当然不是。根据观察，
+F0 = F1, F2 = F0 + F1;
+
+TODO  编辑矩阵、公式
+写成矩阵形式就是：
+
+f1    1 0  f0
+f2    1 1  f1
+
+将这个2*2的矩阵记做A；
+那么可以推导出：
+fn        1 0  n  f0
+fn+1    1 1      f1
+
+计算矩阵的幂，回忆一下线性代数知识，我们需要把A对角化。对角化的条件是什么？A有2个线性无关的特征向量。
+
+
+
+<!-- markdown end -->
+</div>
+<div class="entry" id="main">
+<!-- content -->
+<p>斐波那契数列是由数学家列昂纳多·斐波那契（Leonardoda Fibonacci）以兔子繁殖为例子而引入的。它的数学定义如下：</p>
+
+<ul>
+<li>F0 = 1</li>
+<li>F1 = 1,</li>
+<li>Fn = Fn-1 + Fn-2</li>
+</ul>
+
+<p>于是很自然的给出一个递归算法：</p>
+
+<h2 id="">递归算法</h2>
+
+<pre><code class="cpp">int fib1(int n)  {
+    if (n &lt; 2)
+        return 1;
+    else
+        return fib1(n - 1) + fib1(n - 2);
+}
+</code></pre>
+
+<p>该算法根据数学定义，直接翻译成递归代码，简洁明了。然而，复杂度是指数级，随着n的增大，计算时间指数级增加，以至于稍稍大一点的n现代计算机几乎无法求出。</p>
+
+<h2 id="">一个多项式复杂度的算法</h2>
+
+<p>对于上一个算法，聪明的读者应该看出来了，每次都有重复的计算。比如说已经计算过第n-2项的数列项，在fib1(n - 1)中，又计算了一遍。所以很容易想到采用空间换时间的思想，去除这些重复运算：</p>
+
+<pre><code class="cpp">int fib2(int n)  {
+    if (n &lt; 2)
+        return 1;
+
+    std::unique_ptr&lt;int []&gt; arr(new int[n]);
+    arr[0] = arr[1] = 1;
+    for (int i = 2; i &lt; n; ++ i)
+         arr[i] = arr[i - 1] + arr[i - 2];
+
+    return arr[n - 1];
+}
+</code></pre>
+
+<p>这里分配了一个临时数组arr缓存已经计算过的数列项，算法复杂度从指数级降到了线性复杂度，现在基本上可以计算任意的数列项了。</p>
+
+<h2 id="">这是最好的算法了吗</h2>
+
+<p>相信绝大多数读者都做到了这一步。然而计算斐波那契数列的最佳算法就止步于此吗？
+当然不是。根据观察，
+F0 = F1, F2 = F0 + F1;</p>
+
+<p>TODO  编辑矩阵、公式
+写成矩阵形式就是：</p>
+
+<p>f1    1 0  f0
+f2    1 1  f1</p>
+
+<p>将这个2*2的矩阵记做A；
+那么可以推导出：
+fn        1 0  n  f0
+fn+1    1 1      f1</p>
+
+<p>计算矩阵的幂，回忆一下线性代数知识，我们需要把A对角化。对角化的条件是什么？A有2个线性无关的特征向量。</p>
+<!-- content end -->
+</div>
+<br>
+<br>
+    <div id="disqus_thread"></div>
+	<div class="footer">
+		<p>© Copyright 2014 by isnowfy, Designed by isnowfy</p>
+	</div>
+</div>
+<script src="main.js"></script>
+<script id="content" type="text/mustache">
+    <h1>{{title}}</h1>
+    <div class="tag">
+    {{date}}
+    {{#tags}}
+    <a href="/#/tag/{{name}}">#{{name}}</a>
+    {{/tags}}
+    </div>
+</script>
+<script id="pagesTemplate" type="text/mustache">
+    {{#pages}}
+    <li>
+        <a href="{{path}}">{{title}}</a>
+    </li>
+    {{/pages}}
+</script>
+<script>
+$(document).ready(function() {
+    $.ajax({
+        url: "main.json",
+        type: "GET",
+        dataType: "json",
+        success: function(data) {
+            $("#title").html(data.name);
+            var pagesTemplate = Hogan.compile($("#pagesTemplate").html());
+            var pagesHtml = pagesTemplate.render({"pages": data.pages});
+            $("#pages").append(pagesHtml);
+            //path
+            var path = "fib.html";
+            //path end
+            var now = 0;
+            for (var i = 0; i < data.posts.length; ++i)
+                if (path == data.posts[i].path)
+                    now = i;
+            var post = data.posts[now];
+            var tmp = post.tags.split(" ");
+            var tags = [];
+            for (var i = 0; i < tmp.length; ++i)
+                if (tmp[i].length > 0)
+                    tags.push({"name": tmp[i]});
+            var contentTemplate = Hogan.compile($("#content").html());
+            var contentHtml = contentTemplate.render({"title": post.title, "tags": tags, "date": post.date});
+            $("#main").prepend(contentHtml);
+            if (data.disqus_shortname.length > 0) {
+                var disqus_shortname = data.disqus_shortname;
+                (function() {
+                    var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+                    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+                    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+                })();
+            }
+        }
+    });
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ["\\(", "\\)"]], processEscapes: true}});
+</script>
+</body>
+</html>
