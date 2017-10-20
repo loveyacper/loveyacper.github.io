@@ -75,10 +75,10 @@ cout << result << endl;
 尽管STL算法对函数式编程提供了支持，仍然有点冗余。
 让我们看看书中给出的scala核心实现：
 ```scala
-“val result = employees
+val result = employees
      .filter(_.length() > 1)
      .map(_.capitalize)
-     .reduce(_ + "," + _)”
+     .reduce(_ + "," + _)
 ```
 只需要一行scala代码，完美fluent风格的实现。对于这个例子，Java8也几乎达到了scala的水平。相比之下，C++的函数式编程太过啰嗦臃肿，而且没有reduce的直接支持，accumulate算法需要小心处理第一个元素。
 
@@ -95,6 +95,13 @@ cout << result << endl;
  - reduce
 
       reduce和fold基本没什么区别，两者都用一个累积量"收集"集合元素。reduce函数一般需要提供一个初始值。而fold一般来说初始值为空。对应于C++，reduce则是accumulate。fold在处理集合元素时可以指定顺序或者反序，对应于函数名字foldLeft和foldRight。
+
+
+##CH3
+
+TODO
+
+
 <!-- markdown end -->
 </div>
 <div class="entry" id="main">
@@ -147,10 +154,10 @@ cout &lt;&lt; result &lt;&lt; endl;
 <p>尽管STL算法对函数式编程提供了支持，仍然有点冗余。
 让我们看看书中给出的scala核心实现：</p>
 
-<pre><code class="scala">“val result = employees
+<pre><code class="scala">val result = employees
      .filter(_.length() &gt; 1)
      .map(_.capitalize)
-     .reduce(_ + "," + _)”
+     .reduce(_ + "," + _)
 </code></pre>
 
 <p>只需要一行scala代码，完美fluent风格的实现。对于这个例子，Java8也几乎达到了scala的水平。相比之下，C++的函数式编程太过啰嗦臃肿，而且没有reduce的直接支持，accumulate算法需要小心处理第一个元素。</p>
@@ -168,6 +175,10 @@ cout &lt;&lt; result &lt;&lt; endl;
 
 <p>reduce和fold基本没什么区别，两者都用一个累积量"收集"集合元素。reduce函数一般需要提供一个初始值。而fold一般来说初始值为空。对应于C++，reduce则是accumulate。fold在处理集合元素时可以指定顺序或者反序，对应于函数名字foldLeft和foldRight。</p></li></ul></li>
 </ul>
+
+<h2 id="ch3">CH3</h2>
+
+<p>TODO</p>
 <!-- content end -->
 </div>
 <br>
