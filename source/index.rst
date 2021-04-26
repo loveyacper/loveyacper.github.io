@@ -10,7 +10,7 @@
    :maxdepth: 2
    :caption: Contents:
 
-
+   k8s/k8s_http_api.rst
 
 Indices and tables
 ==================
